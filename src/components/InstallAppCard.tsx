@@ -86,10 +86,14 @@ export function InstallAppCard({ compact = false }: { compact?: boolean }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: compact ? 14 : 15 }}>Install Tapas</div>
         <p className="text-caption">
-          {iosHint ? "Use Share, then Add to Home Screen." : "Open faster from your home screen."}
+          {iosHint
+            ? "On iPhone, use Share, then Add to Home Screen."
+            : deferred
+              ? "Open faster from your home screen."
+              : "Use your browser install icon or menu to add Tapas."}
         </p>
       </div>
-      {!iosHint && (
+      {!iosHint && deferred && (
         <button className="btn btn-primary" style={{ minHeight: 36, padding: "7px 12px" }} onClick={install} disabled={!deferred}>
           <IconInstall width={15} height={15} /> Install
         </button>

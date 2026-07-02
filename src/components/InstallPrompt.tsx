@@ -22,9 +22,6 @@ export function InstallPrompt() {
     const onBIP = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);
-      if (!localStorage.getItem(INSTALL_DISMISS_KEY)) {
-        window.setTimeout(() => setShow(true), 8000);
-      }
     };
     window.addEventListener("beforeinstallprompt", onBIP);
     const onRequest = () => {
@@ -32,15 +29,10 @@ export function InstallPrompt() {
     };
     window.addEventListener(INSTALL_REQUEST_EVENT, onRequest);
 
-    // iOS Safari has no beforeinstallprompt — show a hint tooltip instead.
+    // iOS Safari has no beforeinstallprompt; users must use Share > Add to Home Screen.
     const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
     const isSafari = /safari/i.test(window.navigator.userAgent) && !/crios|fxios/i.test(window.navigator.userAgent);
-    if (isIOS && isSafari) {
-      setIosHint(true);
-      window.setTimeout(() => {
-        if (!localStorage.getItem(INSTALL_DISMISS_KEY)) setShow(true);
-      }, 9000);
-    }
+    if (isIOS && isSafari) setIosHint(true);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", onBIP);
@@ -106,11 +98,13 @@ export function InstallPrompt() {
           <div style={{ fontWeight: 600, fontSize: 15 }}>Install Tapas</div>
           <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
             {iosHint
-              ? "Tap Share → Add to Home Screen"
-              : "Add to your home screen for the full app."}
+              ? "On iPhone, tap Share, then Add to Home Screen."
+              : deferred
+                ? "Add to your home screen for the full app."
+                : "Use your browser menu or address-bar install icon to add Tapas."}
           </div>
         </div>
-        {!iosHint && (
+        {!iosHint && deferred && (
           <button
             className="btn btn-primary"
             style={{ minHeight: 40, padding: "8px 16px", flexShrink: 0 }}

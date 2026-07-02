@@ -16,8 +16,8 @@
     { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
-    { "name": "Breathe", "short_name": "Breathe", "url": "/breathe", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Log a workout", "short_name": "Move", "url": "/move", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "Yoga", "short_name": "Yoga", "url": "/yoga", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+    { "name": "Breathe", "short_name": "Breathe", "url": "/player/breathe", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Log a workout", "short_name": "Move", "url": "/routine", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Yoga", "short_name": "Yoga", "url": "/library?tab=yoga", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
   ]
 }

@@ -3,8 +3,10 @@ export const INSTALL_REQUEST_EVENT = "tapas-install-request";
 
 export function isStandaloneApp() {
   if (typeof window === "undefined") return false;
+
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
+    // iOS Safari exposes this only at runtime.
     Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone)
   );
 }
