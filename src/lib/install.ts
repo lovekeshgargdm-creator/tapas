@@ -1,0 +1,15 @@
+export const INSTALL_DISMISS_KEY = "tapas-install-dismissed";
+export const INSTALL_REQUEST_EVENT = "tapas-install-request";
+
+export function isStandaloneApp() {
+  if (typeof window === "undefined") return false;
+  return (
+    window.matchMedia("(display-mode: standalone)").matches ||
+    Boolean((window.navigator as Navigator & { standalone?: boolean }).standalone)
+  );
+}
+
+export function requestInstallPrompt() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(INSTALL_REQUEST_EVENT));
+}

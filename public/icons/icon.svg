@@ -1,19 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#2ee5b5"/>
-      <stop offset="1" stop-color="#4ae38d"/>
+    <linearGradient id="g" x1="96" y1="80" x2="416" y2="432" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f5fff8"/>
+      <stop offset="0.45" stop-color="#73fd9c"/>
+      <stop offset="1" stop-color="#2ee5b5"/>
     </linearGradient>
-    <radialGradient id="bg" cx="50%" cy="34%" r="75%">
-      <stop offset="0" stop-color="#16221d"/>
-      <stop offset="1" stop-color="#0b120f"/>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#12331f"/>
+      <stop offset="1" stop-color="#07100b"/>
     </radialGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="url(#bg)"/>
-  <g transform="translate(96,88) scale(5)" fill="url(#g)">
-    <path d="M32 6c6 8 6 20 0 30-6-10-6-22 0-30z" opacity="0.95"/>
-    <path d="M32 12c9 4 15 13 16 24-10-2-17-9-16-24z" opacity="0.55"/>
-    <path d="M32 12C23 16 17 25 16 36c10-2 17-9 16-24z" opacity="0.55"/>
-    <path d="M12 38c5 9 13 14 20 14s15-5 20-14c-7 5-13 7-20 7s-13-2-20-7z"/>
-  </g>
+  <path fill="none" stroke="#d9fff0" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" d="M126 400V260c0-76 58-140 130-176 72 36 130 100 130 176v140"/>
+  <path fill="url(#g)" d="M256 82c32 56 34 114 2 174-34-58-34-116-2-174Z"/>
+  <path fill="url(#g)" opacity=".8" d="M256 174c58 18 100 70 106 142-68-8-112-56-106-142Z"/>
+  <path fill="url(#g)" opacity=".8" d="M256 174c-58 18-100 70-106 142 68-8 112-56 106-142Z"/>
+  <circle cx="256" cy="292" r="32" fill="#b7ffd1"/>
+  <path fill="url(#g)" d="M178 382c40-38 74-58 78-58s38 20 78 58c-54 26-102 26-156 0Z"/>
+  <path fill="none" stroke="#f4fff8" stroke-width="14" stroke-linecap="round" d="M184 424c48 28 96 28 144 0"/>
 </svg>

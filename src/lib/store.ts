@@ -69,6 +69,8 @@ interface AppState {
   addYoga: (y: YogaSession) => void;
   addBreath: (b: BreathSession) => void;
   addBody: (m: BodyMetric) => void;
+  updateBody: (id: string, patch: Partial<BodyMetric>) => void;
+  deleteBody: (id: string) => void;
 
   // workout draft
   setDraft: (ids: string[]) => void;
@@ -265,6 +267,14 @@ export const useStore = create<AppState>()(
             : st.streaks,
         })),
       addBody: (m) => set((st) => ({ body: [m, ...st.body] })),
+      updateBody: (id, patch) =>
+        set((st) => ({
+          body: st.body.map((entry) =>
+            entry.id === id ? { ...entry, ...patch, id: entry.id } : entry,
+          ),
+        })),
+      deleteBody: (id) =>
+        set((st) => ({ body: st.body.filter((entry) => entry.id !== id) })),
 
       enroll: (programId) =>
         set({

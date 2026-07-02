@@ -73,14 +73,8 @@ export default function HomePage() {
     const d = localDayKey(y.date);
     yogaCountByDay[d] = (yogaCountByDay[d] || 0) + 1;
   });
-  const breathCountByDay: Record<string, number> = {};
-  s.breath.filter((b) => b.completed).forEach(b => {
-    const d = localDayKey(b.date);
-    breathCountByDay[d] = (breathCountByDay[d] || 0) + 1;
-  });
-
-  const maxVal = Math.max(1, ...graphDays.map(d => Math.max(trainCountByDay[d] || 0, yogaCountByDay[d] || 0, breathCountByDay[d] || 0)));
-  const hasGraphData = graphDays.some(d => (trainCountByDay[d] || 0) + (yogaCountByDay[d] || 0) + (breathCountByDay[d] || 0) > 0);
+  const maxVal = Math.max(1, ...graphDays.map(d => Math.max(trainCountByDay[d] || 0, yogaCountByDay[d] || 0)));
+  const hasGraphData = graphDays.some(d => (trainCountByDay[d] || 0) + (yogaCountByDay[d] || 0) > 0);
 
   return (
     <div className="page">
@@ -173,10 +167,8 @@ export default function HomePage() {
             {graphDays.map(d => {
               const tCount = trainCountByDay[d] || 0;
               const yCount = yogaCountByDay[d] || 0;
-              const bCount = breathCountByDay[d] || 0;
               const tHeight = (tCount / maxVal) * 100;
               const yHeight = (yCount / maxVal) * 100;
-              const bHeight = (bCount / maxVal) * 100;
               const isToday = d === localDayKey(new Date());
               return (
                 <div key={d} style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", height: "100%", gap: 8 }}>
@@ -193,12 +185,6 @@ export default function HomePage() {
                       animate={{ height: yCount > 0 ? `${yHeight}%` : 3 }}
                       transition={{ duration: 0.5, ease: "easeOut", delay: 0.05 }}
                       style={{ width: 12, background: yCount > 0 ? YOGA_COLOR : "var(--color-surface-3)", borderRadius: 4, minHeight: 3 }}
-                    />
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: bCount > 0 ? `${bHeight}%` : 3 }}
-                      transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
-                      style={{ width: 12, background: bCount > 0 ? BREATH_COLOR : "var(--color-surface-3)", borderRadius: 4, minHeight: 3 }}
                     />
                   </div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? "var(--color-mint-active)" : "var(--color-text-muted)" }}>
@@ -220,9 +206,6 @@ export default function HomePage() {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
             <div style={{ width: 11, height: 11, borderRadius: 3, background: YOGA_COLOR }} /> Yoga
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--color-text-secondary)" }}>
-            <div style={{ width: 11, height: 11, borderRadius: 3, background: BREATH_COLOR }} /> Breath
           </div>
         </div>
       </div>

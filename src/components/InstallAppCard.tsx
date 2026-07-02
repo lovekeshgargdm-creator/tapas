@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { IconClose, IconInstall } from "./Icons";
 import { Logo } from "./Logo";
+import { INSTALL_DISMISS_KEY, isStandaloneApp } from "@/lib/install";
 
 interface BIPEvent extends Event {
   prompt: () => Promise<void>;
@@ -16,16 +17,15 @@ export function InstallAppCard({ compact = false }: { compact?: boolean }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (sessionStorage.getItem("tapas-install-card-dismissed")) {
+    if (
+      localStorage.getItem(INSTALL_DISMISS_KEY) ||
+      sessionStorage.getItem("tapas-install-card-dismissed")
+    ) {
       setHidden(true);
       return;
     }
 
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // @ts-expect-error iOS Safari
-      window.navigator.standalone;
-    if (standalone) {
+    if (isStandaloneApp()) {
       setHidden(true);
       return;
     }
@@ -45,7 +45,9 @@ export function InstallAppCard({ compact = false }: { compact?: boolean }) {
   }, []);
 
   const dismiss = () => {
+    localStorage.setItem(INSTALL_DISMISS_KEY, "1");
     sessionStorage.setItem("tapas-install-card-dismissed", "1");
+    sessionStorage.setItem("tapas-install-dismissed", "1");
     setHidden(true);
   };
 

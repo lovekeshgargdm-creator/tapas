@@ -15,11 +15,10 @@ import {
   IconInstall,
   IconRuler,
   IconRoutine,
-  IconUser,
 } from "@/components/Icons";
 
 const PROFILE_LINKS = [
-  { href: "/profile/personal", label: "Profile & Account", Icon: IconUser },
+  { href: "/profile/personal", label: "Goals & Basic Info", Icon: IconEdit },
   { href: "/profile/measurements", label: "Measurements", Icon: IconRuler },
 ];
 

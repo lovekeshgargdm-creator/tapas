@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { IconBell } from "./Icons";
+import { IconInstall } from "./Icons";
 import { Logo } from "./Logo";
-import { useStore } from "@/lib/store";
+import { requestInstallPrompt } from "@/lib/install";
 
 export function AppHeader({
   title,
@@ -16,8 +16,6 @@ export function AppHeader({
   accent?: string;
   right?: React.ReactNode;
 }) {
-  const hasAccountLogs = useStore((s) => (s.accountLogs || []).length > 0);
-
   return (
     <header
       className="row between"
@@ -53,24 +51,9 @@ export function AppHeader({
         </div>
       </div>
       {right ?? (
-        <Link className="icon-btn" href="/profile/activity" aria-label="Account activity" style={{ position: "relative" }}>
-          <IconBell width={22} height={22} />
-          {hasAccountLogs && (
-            <span
-              aria-hidden
-              style={{
-                position: "absolute",
-                right: 9,
-                top: 9,
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "var(--color-mint-active)",
-                boxShadow: "0 0 8px rgba(115,253,156,0.75)",
-              }}
-            />
-          )}
-        </Link>
+        <button className="icon-btn" onClick={requestInstallPrompt} aria-label="Install app" title="Install app">
+          <IconInstall width={22} height={22} />
+        </button>
       )}
     </header>
   );

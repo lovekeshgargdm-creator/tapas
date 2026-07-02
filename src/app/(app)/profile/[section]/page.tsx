@@ -12,8 +12,8 @@ import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { useMounted } from "@/lib/useMounted";
 import {
   IconCheck,
+  IconEdit,
   IconSettings,
-  IconUser,
 } from "@/components/Icons";
 import type { Gender } from "@/lib/types";
 
@@ -109,6 +109,7 @@ export default function ProfileSectionPage() {
       heightCm: heightVal || undefined,
     });
     setEditing(false);
+    setInputError("");
   };
 
   const saveAccount = () => {
@@ -156,11 +157,12 @@ export default function ProfileSectionPage() {
       neck: parse(mNeck, LIMITS.neckCm),
     });
     setSaved(true);
+    setInputError("");
     setTimeout(() => setSaved(false), 1800);
   };
 
   const showLimit = (label: string, max: number, unit = "") => {
-    setInputError(`${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}.`);
+    setInputError(`${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}. Negative values are not allowed.`);
   };
 
   const heightDisplay = () => {
@@ -200,12 +202,30 @@ export default function ProfileSectionPage() {
             >
               <Logo size={68} />
             </div>
-            <div style={{ minWidth: 0 }}>
-              <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0 }}>{s.profile.name || "Practitioner"}</h2>
-              <p className="text-caption" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis" }}>
-                {s.profile.email}
-              </p>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              {editingAccount ? (
+                <div className="stack gap-xs">
+                  <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" style={{ minHeight: 38 }} />
+                  <input className="input" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email" style={{ minHeight: 38 }} />
+                </div>
+              ) : (
+                <>
+                  <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0 }}>{s.profile.name || "Practitioner"}</h2>
+                  <p className="text-caption" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {s.profile.email}
+                  </p>
+                </>
+              )}
             </div>
+            <button
+              className="icon-btn"
+              onClick={() => (editingAccount ? saveAccount() : setEditingAccount(true))}
+              aria-label="Edit name and email"
+              disabled={editingAccount && (!editName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim()))}
+              style={{ width: 38, height: 38, flexShrink: 0 }}
+            >
+              {editingAccount ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
+            </button>
           </section>
 
           {dosha && (
@@ -259,41 +279,6 @@ export default function ProfileSectionPage() {
 
           <section className="card" style={{ marginBottom: 18 }}>
             <div className="row between" style={{ marginBottom: 14 }}>
-              <SectionTitle>Manage Account</SectionTitle>
-              <button className="icon-btn" onClick={() => (editingAccount ? saveAccount() : setEditingAccount(true))} aria-label="Edit account">
-                {editingAccount ? <IconCheck width={17} height={17} /> : <IconSettings width={17} height={17} />}
-              </button>
-            </div>
-            {editingAccount ? (
-              <div className="stack gap-sm">
-                <Field label="Name">
-                  <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} />
-                </Field>
-                <Field label="Email">
-                  <input className="input" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
-                </Field>
-                <button className="btn btn-primary btn-block" onClick={saveAccount} disabled={!editName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim())}>
-                  Save Account
-                </button>
-              </div>
-            ) : (
-              <button className="card card-interactive row between" style={{ width: "100%", padding: 14, textAlign: "left", background: "var(--color-surface-main)" }} onClick={() => setEditingAccount(true)}>
-                <span className="row gap-sm">
-                  <span style={{ width: 38, height: 38, borderRadius: 12, display: "grid", placeItems: "center", background: "rgba(115,253,156,0.1)", color: "var(--color-mint-active)" }}>
-                    <IconUser width={19} height={19} />
-                  </span>
-                  <span>
-                    <span style={{ display: "block", fontWeight: 700 }}>Change name or email</span>
-                    <span className="text-caption">Update the details shown in your profile header.</span>
-                  </span>
-                </span>
-                <IconSettings width={17} height={17} style={{ color: "var(--color-text-muted)" }} />
-              </button>
-            )}
-          </section>
-
-          <section className="card" style={{ marginBottom: 18 }}>
-            <div className="row between" style={{ marginBottom: 14 }}>
               <SectionTitle>Basic Info</SectionTitle>
               <button className="icon-btn" onClick={() => (editing ? savePersonal() : setEditing(true))} aria-label="Edit info">
                 {editing ? <IconCheck width={17} height={17} /> : <IconSettings width={17} height={17} />}
@@ -303,7 +288,7 @@ export default function ProfileSectionPage() {
             {editing ? (
               <div className="stack gap-sm">
                 <Field label="Age">
-                  <input className="input" type="number" min="1" max={LIMITS.age} value={editAge} onChange={(e) => setEditAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: () => showLimit("Age", LIMITS.age) }))} />
+                  <input className="input" type="number" inputMode="numeric" min="1" max={LIMITS.age} value={editAge} onChange={(e) => setEditAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: () => showLimit("Age", LIMITS.age) }))} />
                 </Field>
                 <Field label="Gender">
                   <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value as Gender)}>
@@ -314,7 +299,7 @@ export default function ProfileSectionPage() {
                   </select>
                 </Field>
                 <Field label="Height (cm)">
-                  <input className="input" type="number" min="50" max={LIMITS.heightCm} value={editHeight} onChange={(e) => setEditHeight(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: () => showLimit("Height", LIMITS.heightCm, "cm") }))} />
+                  <input className="input" type="number" inputMode="decimal" min="50" max={LIMITS.heightCm} value={editHeight} onChange={(e) => setEditHeight(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: () => showLimit("Height", LIMITS.heightCm, "cm") }))} />
                 </Field>
                 <button className="btn btn-primary btn-block" onClick={savePersonal}>
                   Save
@@ -535,15 +520,19 @@ function MetricTile({ label, value, tone }: { label: string; value: string; tone
   return (
     <div
       style={{
-        minHeight: 76,
-        padding: 12,
+        minHeight: 82,
+        padding: 13,
         borderRadius: 12,
-        background: "var(--color-surface-main)",
-        border: `1px solid ${tone}33`,
+        background: `linear-gradient(135deg, ${tone}1f, rgba(255,255,255,0.025))`,
+        border: `1px solid ${tone}40`,
+        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
       }}
     >
-      <div className="text-caption">{label}</div>
-      <div className="text-mono" style={{ marginTop: 8, fontSize: 19, fontWeight: 700, color: tone }}>
+      <div className="row between" style={{ gap: 8 }}>
+        <div className="text-caption">{label}</div>
+        <span style={{ width: 8, height: 8, borderRadius: "50%", background: tone, boxShadow: `0 0 12px ${tone}99` }} />
+      </div>
+      <div className="text-mono" style={{ marginTop: 10, fontSize: 20, fontWeight: 700, color: tone }}>
         {value}
       </div>
     </div>
@@ -589,10 +578,10 @@ function MeasurementInput({
       className="row between"
       style={{
         gap: 12,
-        padding: 12,
+        padding: "11px 12px",
         borderRadius: 12,
-        background: "var(--color-surface-main)",
-        border: "1px solid rgba(115,253,156,0.08)",
+        background: "linear-gradient(135deg, rgba(115,253,156,0.07), rgba(255,255,255,0.02))",
+        border: "1px solid rgba(115,253,156,0.14)",
       }}
     >
       <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>

@@ -6,7 +6,7 @@ interface LogoProps {
 export function Logo({ size = 64, withGlow = false }: LogoProps) {
   return (
     <img
-      src="/icons/icon.svg"
+      src="/icons/tapas-logo.png"
       width={size}
       height={size}
       alt="Tapas"

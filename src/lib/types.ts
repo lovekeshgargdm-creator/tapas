@@ -206,6 +206,7 @@ export interface RoutineItem {
 export interface DayRoutine {
   day: DayOfWeek;
   timeOfDay: "morning" | "evening" | "any";
+  focus?: string;
   items: RoutineItem[];
   enabled: boolean;
 }

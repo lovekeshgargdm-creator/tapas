@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { IconClose } from "./Icons";
+import { INSTALL_DISMISS_KEY, INSTALL_REQUEST_EVENT, isStandaloneApp } from "@/lib/install";
 
 interface BIPEvent extends Event {
   prompt: () => Promise<void>;
@@ -16,37 +17,42 @@ export function InstallPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (sessionStorage.getItem("tapas-install-dismissed")) return;
-
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      // @ts-expect-error iOS Safari
-      window.navigator.standalone;
-    if (standalone) return;
+    if (isStandaloneApp()) return;
 
     const onBIP = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);
-      window.setTimeout(() => setShow(true), 8000);
+      if (!localStorage.getItem(INSTALL_DISMISS_KEY)) {
+        window.setTimeout(() => setShow(true), 8000);
+      }
     };
     window.addEventListener("beforeinstallprompt", onBIP);
+    const onRequest = () => {
+      if (!isStandaloneApp()) setShow(true);
+    };
+    window.addEventListener(INSTALL_REQUEST_EVENT, onRequest);
 
     // iOS Safari has no beforeinstallprompt — show a hint tooltip instead.
     const isIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
     const isSafari = /safari/i.test(window.navigator.userAgent) && !/crios|fxios/i.test(window.navigator.userAgent);
     if (isIOS && isSafari) {
+      setIosHint(true);
       window.setTimeout(() => {
-        setIosHint(true);
-        setShow(true);
+        if (!localStorage.getItem(INSTALL_DISMISS_KEY)) setShow(true);
       }, 9000);
     }
 
-    return () => window.removeEventListener("beforeinstallprompt", onBIP);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBIP);
+      window.removeEventListener(INSTALL_REQUEST_EVENT, onRequest);
+    };
   }, []);
 
   const dismiss = () => {
     setShow(false);
+    localStorage.setItem(INSTALL_DISMISS_KEY, "1");
     sessionStorage.setItem("tapas-install-dismissed", "1");
+    sessionStorage.setItem("tapas-install-card-dismissed", "1");
   };
 
   const install = async () => {
@@ -109,6 +115,7 @@ export function InstallPrompt() {
             className="btn btn-primary"
             style={{ minHeight: 40, padding: "8px 16px", flexShrink: 0 }}
             onClick={install}
+            disabled={!deferred}
           >
             Install
           </button>

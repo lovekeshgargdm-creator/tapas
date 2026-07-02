@@ -10,12 +10,20 @@ import { useStore, uid, todayISO } from "@/lib/store";
 import {
   IconSearch, IconPlus,
   IconDumbbell,
-  IconTrash, IconClose, IconPlay,
+  IconTrash, IconClose, IconPlay, IconCheck, IconYoga, IconBreathe,
 } from "@/components/Icons";
 import type { WeeklyRoutine, DayRoutine, DayOfWeek, RoutineItem } from "@/lib/types";
 
 const DAYS_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const todayRoutineDay = () => ((new Date().getDay() + 6) % 7) as DayOfWeek;
+const blankRoutineDays = () =>
+  Array.from({ length: 7 }, (_, i) => ({
+    day: i as DayOfWeek,
+    timeOfDay: "any" as const,
+    focus: "",
+    items: [],
+    enabled: i < 5,
+  }));
 
 function cloneRoutineItem(item: RoutineItem): RoutineItem {
   return {
@@ -38,19 +46,16 @@ export default function TrainPage() {
   const [buildingRoutine, setBuildingRoutine] = useState(false);
   const [routineName, setRoutineName] = useState("My Routine");
   const [allSameDay, setAllSameDay] = useState(false);
-  const [dayRoutines, setDayRoutines] = useState<DayRoutine[]>(
-    Array.from({ length: 7 }, (_, i) => ({
-      day: i as DayOfWeek,
-      timeOfDay: "any",
-      items: [],
-      enabled: i < 5,
-    }))
-  );
+  const [dayRoutines, setDayRoutines] = useState<DayRoutine[]>(blankRoutineDays());
   const [editingDay, setEditingDay] = useState<DayOfWeek | null>(null);
   const [addItemMode, setAddItemMode] = useState<"exercise" | "asana" | "pranayama" | null>(null);
 
   const toggleDay = (d: DayOfWeek) => {
     setDayRoutines((prev) => prev.map((dr) => dr.day === d ? { ...dr, enabled: !dr.enabled } : dr));
+  };
+
+  const updateDayFocus = (day: DayOfWeek, focus: string) => {
+    setDayRoutines((prev) => prev.map((dr) => dr.day === day ? { ...dr, focus } : dr));
   };
 
   const updateItemInDay = (day: DayOfWeek, itemId: string, updates: Partial<RoutineItem>) => {
@@ -81,6 +86,7 @@ export default function TrainPage() {
     const days = allSameDay
       ? dayRoutines.map((dr) => ({
           ...dr,
+          focus: dayRoutines[0].focus,
           items: dr.enabled ? dayRoutines[0].items.map(cloneRoutineItem) : [],
         }))
       : dayRoutines;
@@ -94,7 +100,7 @@ export default function TrainPage() {
     };
     saveWeeklyRoutine(routine);
     setBuildingRoutine(false);
-    setDayRoutines(Array.from({ length: 7 }, (_, i) => ({ day: i as DayOfWeek, timeOfDay: "any", items: [], enabled: i < 5 })));
+    setDayRoutines(blankRoutineDays());
     setRoutineName("My Routine");
     setEditingDay(null);
     setAddItemMode(null);
@@ -102,7 +108,10 @@ export default function TrainPage() {
 
   const useRoutine = (routine: WeeklyRoutine) => {
     const today = todayRoutineDay();
-    const plan = routine.days.find((day) => day.enabled && day.day === today) || routine.days.find((day) => day.enabled);
+    const plan =
+      routine.days.find((day) => day.enabled && day.day === today && day.items.length > 0) ||
+      routine.days.find((day) => day.enabled && day.items.length > 0) ||
+      routine.days.find((day) => day.enabled);
     if (!plan || plan.items.length === 0) return;
     const exerciseIds = plan.items.filter((item) => item.type === "exercise").map((item) => item.refId);
     if (exerciseIds.length > 0) {
@@ -170,6 +179,7 @@ export default function TrainPage() {
               setAllSame={setAllSameDay}
               dayRoutines={dayRoutines}
               onToggleDay={toggleDay}
+              onUpdateFocus={updateDayFocus}
               onUpdateItem={updateItemInDay}
               onAddItem={addItemToDay}
               onRemoveItem={removeItemFromDay}
@@ -190,7 +200,7 @@ export default function TrainPage() {
 // ─── Train Routine Builder ───
 function TrainRoutineBuilder({
   name, setName, allSame, setAllSame,
-  dayRoutines, onToggleDay, onUpdateItem,
+  dayRoutines, onToggleDay, onUpdateFocus, onUpdateItem,
   onAddItem, onRemoveItem,
   editingDay, setEditingDay,
   addItemMode, setAddItemMode,
@@ -200,6 +210,7 @@ function TrainRoutineBuilder({
   allSame: boolean; setAllSame: (b: boolean) => void;
   dayRoutines: DayRoutine[];
   onToggleDay: (d: DayOfWeek) => void;
+  onUpdateFocus: (d: DayOfWeek, focus: string) => void;
   onUpdateItem: (d: DayOfWeek, id: string, updates: Partial<RoutineItem>) => void;
   onAddItem: (d: DayOfWeek, item: RoutineItem) => void;
   onRemoveItem: (d: DayOfWeek, id: string) => void;
@@ -283,6 +294,13 @@ function TrainRoutineBuilder({
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div style={{ fontWeight: 700, fontSize: 15 }}>{allSame ? "All Days" : DAYS_LABELS[dr.day]}</div>
           </div>
+          <input
+            className="input"
+            value={dr.focus || ""}
+            onChange={(event) => onUpdateFocus(dr.day, event.target.value)}
+            placeholder={allSame ? "Routine focus" : `${DAYS_LABELS[dr.day]} focus`}
+            style={{ minHeight: 36, padding: "8px 11px", fontSize: 13, marginBottom: 10 }}
+          />
 
           {dr.items.length > 0 && (
             <div style={{ marginBottom: 10 }}>
@@ -291,7 +309,7 @@ function TrainRoutineBuilder({
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{ width: 36, height: 36, borderRadius: 10, background: "rgba(115,253,156,0.1)", color: "var(--color-mint-active)", display: "grid", placeItems: "center" }}>
-                        {item.type === "exercise" ? <IconDumbbell width={18} height={18} /> : "🧘"}
+                        {item.type === "exercise" ? <IconDumbbell width={18} height={18} /> : item.type === "asana" ? <IconYoga width={18} height={18} /> : <IconBreathe width={18} height={18} />}
                       </div>
                       <span style={{ fontSize: 14.5, fontWeight: 600 }}>{item.name}</span>
                     </div>
@@ -372,7 +390,13 @@ function TrainRoutineBuilder({
                 <button className={`chip ${addItemMode === "exercise" ? "active" : ""}`} onClick={() => setAddItemMode("exercise")}>Exercises</button>
                 <button className={`chip ${addItemMode === "asana" ? "active" : ""}`} onClick={() => setAddItemMode("asana")}>Asanas</button>
                 <button className={`chip ${addItemMode === "pranayama" ? "active" : ""}`} onClick={() => setAddItemMode("pranayama")}>Pranayama</button>
-                <button className="chip" onClick={() => { setEditingDay(null); setAddItemMode(null); }}>Done</button>
+                <button
+                  className="btn btn-secondary"
+                  style={{ minHeight: 30, padding: "5px 10px", fontSize: 12, marginLeft: "auto", flexShrink: 0 }}
+                  onClick={() => { setEditingDay(null); setAddItemMode(null); }}
+                >
+                  <IconCheck width={13} height={13} /> Done
+                </button>
               </div>
               {addItemMode === "exercise" && (
                 <div style={{ paddingBottom: 10 }}>
@@ -386,12 +410,14 @@ function TrainRoutineBuilder({
                     {addList.map((e) => (
                       <button key={e.id} onClick={() => onAddItem(dr.day, { id: uid(), type: "exercise", refId: e.id, name: e.name, sets: [{ id: uid() }], restTimer: 0 })}
                         className="card card-interactive"
-                        style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", padding: 10, fontSize: 13.5, textTransform: "capitalize" }}>
-                        <span>
+                        style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", padding: 10, fontSize: 13.5, textTransform: "capitalize", background: "linear-gradient(135deg, rgba(115,253,156,0.06), rgba(255,255,255,0.02))" }}>
+                        <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontWeight: 700 }}>{e.name}</span>
                           <span className="text-caption">{e.bodyPart || e.equipment}</span>
                         </span>
-                        <IconPlus width={15} height={15} />
+                        <span style={{ width: 28, height: 28, borderRadius: 9, display: "grid", placeItems: "center", background: "rgba(115,253,156,0.12)", color: "var(--color-mint-active)", flexShrink: 0 }}>
+                          <IconPlus width={15} height={15} />
+                        </span>
                       </button>
                     ))}
                     {addLoading && <div style={{ padding: 10, textAlign: "center", fontSize: 12, color: "var(--color-text-muted)" }}>Loading...</div>}
@@ -406,23 +432,27 @@ function TrainRoutineBuilder({
                     {addItemMode === "asana" && asanaList.map((a) => (
                       <button key={a.id} onClick={() => onAddItem(dr.day, { id: uid(), type: "asana", refId: a.id, name: a.nameEnglish, sets: [{ id: uid(), duration: a.holdSeconds.intermediate }], restTimer: 0 })}
                         className="card card-interactive"
-                        style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", padding: 10, fontSize: 13.5 }}>
-                        <span>
+                        style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", padding: 10, fontSize: 13.5, background: "linear-gradient(135deg, rgba(46,229,181,0.07), rgba(255,255,255,0.02))" }}>
+                        <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontWeight: 700 }}>{a.nameEnglish}</span>
                           <span className="text-caption">{a.nameSanskrit} · {a.holdSeconds.intermediate}s</span>
                         </span>
-                        <IconPlus width={15} height={15} />
+                        <span style={{ width: 28, height: 28, borderRadius: 9, display: "grid", placeItems: "center", background: "rgba(46,229,181,0.12)", color: "#2ee5b5", flexShrink: 0 }}>
+                          <IconPlus width={15} height={15} />
+                        </span>
                       </button>
                     ))}
                     {addItemMode === "pranayama" && pranayamaList.map((t) => (
                       <button key={t.id} onClick={() => onAddItem(dr.day, { id: uid(), type: "pranayama", refId: t.id, name: t.name, sets: [{ id: uid(), duration: 300 }], restTimer: 0 })}
                         className="card card-interactive"
-                        style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", padding: 10, fontSize: 13.5 }}>
-                        <span>
+                        style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between", gap: 10, textAlign: "left", padding: 10, fontSize: 13.5, background: "linear-gradient(135deg, rgba(143,212,255,0.07), rgba(255,255,255,0.02))" }}>
+                        <span style={{ minWidth: 0 }}>
                           <span style={{ display: "block", fontWeight: 700 }}>{t.name}</span>
                           <span className="text-caption">{t.nameSanskrit} · {t.ratio.inhale}:{t.ratio.holdIn}:{t.ratio.exhale}</span>
                         </span>
-                        <IconPlus width={15} height={15} />
+                        <span style={{ width: 28, height: 28, borderRadius: 9, display: "grid", placeItems: "center", background: "rgba(143,212,255,0.12)", color: "#8fd4ff", flexShrink: 0 }}>
+                          <IconPlus width={15} height={15} />
+                        </span>
                       </button>
                     ))}
                     {((addItemMode === "asana" && asanaList.length === 0) || (addItemMode === "pranayama" && pranayamaList.length === 0)) && (
@@ -451,12 +481,14 @@ function TrainRoutineBuilder({
 
 function TrainRoutineCard({ routine, onUse, onDelete }: { routine: WeeklyRoutine; onUse: () => void; onDelete: () => void }) {
   const enabledDays = routine.days.filter((d) => d.enabled);
+  const nextFocus = enabledDays.find((day) => day.focus?.trim())?.focus?.trim();
   return (
     <div className="card">
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 16 }}>{routine.name}</div>
           <div className="text-caption" style={{ marginTop: 2 }}>{enabledDays.length} active days · {routine.module === "combined" ? "Yoga + Train" : "Training"}</div>
+          {nextFocus && <div className="text-caption" style={{ marginTop: 4, color: "var(--color-mint-active)" }}>{nextFocus}</div>}
         </div>
         <button className="icon-btn" onClick={onDelete} style={{ width: 32, height: 32, color: "var(--color-status-error)" }}>
           <IconTrash width={15} height={15} />

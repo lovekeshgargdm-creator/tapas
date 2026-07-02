@@ -268,10 +268,10 @@ function todayRoutineDay() {
 
 function LibraryCard({ href, title, subtitle, icon, color, image, onAdd }: { href: string; title: string; subtitle?: string; icon: React.ReactNode; color: string; image?: string; onAdd: () => void }) {
   return (
-    <div className="card" style={{ display: "flex", alignItems: "center", gap: 12, textAlign: "left", width: "100%" }}>
+    <div className="card" style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "center", gap: 12, textAlign: "left", width: "100%", padding: 12 }}>
       <Link href={href} style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, color: "inherit", textDecoration: "none", flex: 1 }}>
         {image ? (
-          <div style={{ width: 52, height: 52, borderRadius: 12, background: "#fff", flexShrink: 0, overflow: "hidden", display: "grid", placeItems: "center" }}>
+          <div style={{ width: 54, height: 54, borderRadius: 12, background: "#fff", flexShrink: 0, overflow: "hidden", display: "grid", placeItems: "center" }}>
             <img src={image} alt={title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         ) : (
@@ -284,18 +284,20 @@ function LibraryCard({ href, title, subtitle, icon, color, image, onAdd }: { hre
           {subtitle && <div className="text-caption" style={{ marginTop: 2, textTransform: "capitalize" }}>{subtitle}</div>}
         </div>
       </Link>
-      <button
-        className="icon-btn"
-        onClick={onAdd}
-        aria-label={`Add ${title} to routine`}
-        title="Add to routine"
-        style={{ width: 38, height: 38, flexShrink: 0, color: "var(--color-mint-active)" }}
-      >
-        <IconPlus width={18} height={18} />
-      </button>
-      <Link href={href} className="icon-btn" aria-label={`View ${title}`} style={{ width: 38, height: 38, flexShrink: 0 }}>
-        <IconArrowRight width={17} height={17} />
-      </Link>
+      <div style={{ display: "grid", gridTemplateColumns: "auto auto", gap: 6 }}>
+        <button
+          className="icon-btn"
+          onClick={onAdd}
+          aria-label={`Add ${title} to routine`}
+          title="Add to routine"
+          style={{ width: 36, height: 36, flexShrink: 0, color: "var(--color-mint-active)", background: "rgba(115,253,156,0.1)" }}
+        >
+          <IconPlus width={17} height={17} />
+        </button>
+        <Link href={href} className="icon-btn" aria-label={`View ${title} details`} title="View details" style={{ width: 36, height: 36, flexShrink: 0 }}>
+          <IconArrowRight width={16} height={16} />
+        </Link>
+      </div>
     </div>
   );
 }

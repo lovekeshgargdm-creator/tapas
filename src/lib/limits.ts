@@ -22,7 +22,9 @@ export function clampNumericInput(
   max: number,
   options: { decimal?: boolean; onLimit?: () => void } = {},
 ) {
+  const hadMinus = raw.includes("-");
   const cleaned = raw.replace(options.decimal ? /[^\d.]/g : /\D/g, "");
+  if (hadMinus) options.onLimit?.();
   if (!cleaned) return "";
   const normalized = options.decimal
     ? cleaned.split(".").slice(0, 2).join(".")

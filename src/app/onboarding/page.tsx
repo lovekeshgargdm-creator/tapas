@@ -130,7 +130,7 @@ export default function Onboarding() {
   };
 
   const showLimit = (label: string, max: number, unit = "") => {
-    setInputError(`${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}.`);
+    setInputError(`${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}. Negative values are not allowed.`);
   };
 
   const currentStepIndex = STEPS_ORDER.indexOf(step);
