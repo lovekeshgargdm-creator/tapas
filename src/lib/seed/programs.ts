@@ -1,0 +1,88 @@
+import type { Program } from "../types";
+
+export const PROGRAMS: Program[] = [
+  {
+    id: "breathwork-kickstart",
+    name: "7-Day Breathwork Kickstart",
+    description: "One new technique each day, ten minutes at a time. Build a calm, consistent breath practice in a single week.",
+    weeks: 1,
+    difficulty: "beginner",
+    focus: ["pranayama"],
+    tier: "free",
+    accent: "#2ee5b5",
+    days: [
+      { week: 1, day: 1, title: "Day 1 · Box Breathing", type: "breathwork", module: "breathe", description: "Learn the foundation — 4-4-4-4.", durationMin: 10, refId: "box" },
+      { week: 1, day: 2, title: "Day 2 · Alternate Nostril", type: "breathwork", module: "breathe", description: "Balance the nervous system.", durationMin: 10, refId: "nadi-shodhana" },
+      { week: 1, day: 3, title: "Day 3 · Bee Breath", type: "breathwork", module: "breathe", description: "Soothe a busy mind.", durationMin: 10, refId: "bhramari" },
+      { week: 1, day: 4, title: "Day 4 · Bellows Breath", type: "breathwork", module: "breathe", description: "Energize your morning.", durationMin: 10, refId: "bhastrika" },
+      { week: 1, day: 5, title: "Day 5 · Cooling Breath", type: "breathwork", module: "breathe", description: "Release heat and tension.", durationMin: 10, refId: "sitali" },
+      { week: 1, day: 6, title: "Day 6 · Victorious Breath", type: "breathwork", module: "breathe", description: "Steady, oceanic focus.", durationMin: 10, refId: "ujjayi" },
+      { week: 1, day: 7, title: "Day 7 · Your Choice", type: "breathwork", module: "breathe", description: "Return to your favourite.", durationMin: 10, refId: "4-7-8" },
+    ],
+  },
+  {
+    id: "full-body-basics",
+    name: "2-Week Full Body Basics",
+    description: "Three fundamental workouts per week covering every major movement pattern. Perfect if you're returning to strength.",
+    weeks: 2,
+    difficulty: "beginner",
+    focus: ["strength"],
+    tier: "free",
+    accent: "#73fd9c",
+    days: [
+      { week: 1, day: 1, title: "Day 1 · Push Focus", type: "workout", module: "move", description: "Bench, press, push-ups.", durationMin: 40 },
+      { week: 1, day: 2, title: "Day 2 · Rest", type: "rest", description: "Active recovery or a short walk.", durationMin: 0 },
+      { week: 1, day: 3, title: "Day 3 · Pull Focus", type: "workout", module: "move", description: "Rows, pull-ups, curls.", durationMin: 40 },
+      { week: 1, day: 4, title: "Day 4 · Rest", type: "rest", description: "Recover and hydrate.", durationMin: 0 },
+      { week: 1, day: 5, title: "Day 5 · Legs & Core", type: "workout", module: "move", description: "Squats, lunges, plank.", durationMin: 45 },
+      { week: 2, day: 1, title: "Day 6 · Push Focus", type: "workout", module: "move", description: "Add a little load.", durationMin: 40 },
+      { week: 2, day: 3, title: "Day 7 · Pull Focus", type: "workout", module: "move", description: "Chase a rep or two more.", durationMin: 40 },
+      { week: 2, day: 5, title: "Day 8 · Full Body", type: "workout", module: "move", description: "Bring it all together.", durationMin: 50 },
+    ],
+  },
+  {
+    id: "30-day-yoga",
+    name: "30-Day Yoga Challenge",
+    description: "A daily practice that carries you from beginner to confident intermediate across a full month.",
+    weeks: 4,
+    difficulty: "intermediate",
+    focus: ["yoga", "flexibility"],
+    tier: "pro",
+    accent: "#2ee5b5",
+    days: [
+      { week: 1, day: 1, title: "Day 1 · Foundations", type: "yoga_flow", module: "yoga", description: "Morning Energizer flow.", durationMin: 15, refId: "morning-energizer" },
+      { week: 1, day: 3, title: "Day 3 · Grounding", type: "yoga_flow", module: "yoga", description: "Vata Grounding flow.", durationMin: 30, refId: "vata-grounding" },
+      { week: 2, day: 1, title: "Day 8 · Cooling", type: "yoga_flow", module: "yoga", description: "Pitta Cool Down.", durationMin: 20, refId: "pitta-cool-down" },
+    ],
+  },
+  {
+    id: "stress-reset",
+    name: "Stress Reset",
+    description: "Three weeks of restorative yoga and calming breathwork to down-regulate a frazzled system.",
+    weeks: 3,
+    difficulty: "beginner",
+    focus: ["breathwork", "recovery"],
+    tier: "pro",
+    accent: "#73fd9c",
+    days: [
+      { week: 1, day: 1, title: "Day 1 · Evening Release", type: "yoga_flow", module: "yoga", description: "Restorative wind-down.", durationMin: 20, refId: "evening-release" },
+      { week: 1, day: 2, title: "Day 2 · 4-7-8 Breath", type: "breathwork", module: "breathe", description: "Deep calm before sleep.", durationMin: 10, refId: "4-7-8" },
+    ],
+  },
+  {
+    id: "strength-builder",
+    name: "Strength Builder",
+    description: "Eight weeks of progressive overload, four days per week. Structured, measurable, effective.",
+    weeks: 8,
+    difficulty: "advanced",
+    focus: ["strength"],
+    tier: "pro",
+    accent: "#73fd9c",
+    days: [
+      { week: 1, day: 1, title: "Day 1 · Upper Power", type: "workout", module: "move", description: "Heavy pressing & rows.", durationMin: 55 },
+      { week: 1, day: 2, title: "Day 2 · Lower Power", type: "workout", module: "move", description: "Squat & deadlift focus.", durationMin: 60 },
+    ],
+  },
+];
+
+export const programById = (id: string) => PROGRAMS.find((p) => p.id === id);

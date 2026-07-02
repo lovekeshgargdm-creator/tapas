@@ -1,0 +1,23 @@
+export const MUSCLE_LABELS: Record<string, string> = {
+  chest: "Chest",
+  back: "Back",
+  shoulders: "Shoulders",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  forearms: "Forearms",
+  abs: "Abs",
+  obliques: "Obliques",
+  quads: "Quads",
+  hamstrings: "Hamstrings",
+  glutes: "Glutes",
+  calves: "Calves",
+  traps: "Traps",
+  lats: "Lats",
+  core: "Core",
+  full_body: "Full Body",
+  hip_flexors: "Hip Flexors",
+  adductors: "Adductors",
+  neck: "Neck",
+  lower_back: "Lower Back",
+};
+
