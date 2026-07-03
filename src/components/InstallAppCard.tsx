@@ -3,24 +3,23 @@
 import { useEffect, useState } from "react";
 import { IconClose, IconInstall } from "./Icons";
 import { Logo } from "./Logo";
-import { INSTALL_DISMISS_KEY, isStandaloneApp } from "@/lib/install";
+import { isStandaloneApp } from "@/lib/install";
 
 interface BIPEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 }
 
-export function InstallAppCard({ compact = false }: { compact?: boolean }) {
+export function InstallAppCard({ compact = false, placement = "default" }: { compact?: boolean; placement?: string }) {
   const [deferred, setDeferred] = useState<BIPEvent | null>(null);
   const [iosHint, setIosHint] = useState(false);
   const [hidden, setHidden] = useState(false);
+  const [manualHint, setManualHint] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (
-      localStorage.getItem(INSTALL_DISMISS_KEY) ||
-      sessionStorage.getItem("tapas-install-card-dismissed")
-    ) {
+    const dismissKey = `tapas-install-card-dismissed:${placement}`;
+    if (sessionStorage.getItem(dismissKey)) {
       setHidden(true);
       return;
     }
@@ -42,17 +41,18 @@ export function InstallAppCard({ compact = false }: { compact?: boolean }) {
     if (isIOS && isSafari) setIosHint(true);
 
     return () => window.removeEventListener("beforeinstallprompt", onBIP);
-  }, []);
+  }, [placement]);
 
   const dismiss = () => {
-    localStorage.setItem(INSTALL_DISMISS_KEY, "1");
-    sessionStorage.setItem("tapas-install-card-dismissed", "1");
-    sessionStorage.setItem("tapas-install-dismissed", "1");
+    sessionStorage.setItem(`tapas-install-card-dismissed:${placement}`, "1");
     setHidden(true);
   };
 
   const install = async () => {
-    if (!deferred) return;
+    if (!deferred) {
+      setManualHint(true);
+      return;
+    }
     await deferred.prompt();
     await deferred.userChoice;
     dismiss();
@@ -66,39 +66,38 @@ export function InstallAppCard({ compact = false }: { compact?: boolean }) {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 12,
-        padding: compact ? 12 : 14,
-        border: "1px solid rgba(115,253,156,0.2)",
-        background: "linear-gradient(135deg, rgba(115,253,156,0.1), rgba(46,229,181,0.04))",
+        gap: compact ? 10 : 12,
+        padding: compact ? "12px 14px" : "14px 16px",
+        borderRadius: 8,
+        border: "1px solid rgba(115,253,156,0.22)",
+        background: "rgba(18,49,31,0.7)",
       }}
     >
       <div
         style={{
-          width: compact ? 38 : 44,
-          height: compact ? 38 : 44,
+          width: compact ? 30 : 34,
+          height: compact ? 30 : 34,
           display: "grid",
           placeItems: "center",
           flexShrink: 0,
         }}
       >
-        <Logo size={compact ? 36 : 42} />
+        <Logo size={compact ? 28 : 32} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, fontSize: compact ? 14 : 15 }}>Install Tapas</div>
-        <p className="text-caption">
+        <div style={{ fontWeight: 800, fontSize: compact ? 14 : 15 }}>Install Tapas</div>
+        <p className="text-caption" style={{ lineHeight: 1.25 }}>
           {iosHint
-            ? "On iPhone, use Share, then Add to Home Screen."
-            : deferred
+            ? "On iPhone, tap Share, then Add to Home Screen."
+            : deferred && !manualHint
               ? "Open faster from your home screen."
-              : "Use your browser install icon or menu to add Tapas."}
+              : "Use your browser menu or install icon."}
         </p>
       </div>
-      {!iosHint && deferred && (
-        <button className="btn btn-primary" style={{ minHeight: 36, padding: "7px 12px" }} onClick={install} disabled={!deferred}>
-          <IconInstall width={15} height={15} /> Install
-        </button>
-      )}
-      <button className="icon-btn" aria-label="Dismiss install prompt" onClick={dismiss} style={{ width: 34, height: 34 }}>
+      <button className="btn btn-primary" style={{ minHeight: 38, padding: "8px 14px", flexShrink: 0 }} onClick={install}>
+        <IconInstall width={15} height={15} /> {iosHint ? "Steps" : "Install"}
+      </button>
+      <button className="icon-btn" aria-label="Dismiss install prompt" onClick={dismiss} style={{ width: 32, height: 32, flexShrink: 0 }}>
         <IconClose width={16} height={16} />
       </button>
     </section>

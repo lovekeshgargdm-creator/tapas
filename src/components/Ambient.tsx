@@ -12,14 +12,14 @@ export function Ambient({ dim = false }: { dim?: boolean }) {
           position: "absolute",
           inset: 0,
           background:
-            `radial-gradient(75% 42% at 50% 0%, rgba(46,229,181,${dim ? 0.08 : 0.14}) 0%, rgba(14,21,15,0) 72%)`,
+            `radial-gradient(75% 42% at 50% 0%, ${dim ? "var(--ambient-top-dim)" : "var(--ambient-top)"} 0%, var(--ambient-clear) 72%)`,
         }}
       />
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: "linear-gradient(180deg, rgba(14,21,15,0) 0%, rgba(14,21,15,0.72) 100%)",
+          background: "linear-gradient(180deg, var(--ambient-clear) 0%, var(--ambient-bottom) 100%)",
         }}
       />
     </div>

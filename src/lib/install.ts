@@ -15,3 +15,10 @@ export function requestInstallPrompt() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(INSTALL_REQUEST_EVENT));
 }
+
+export function resetInstallCardsForNextLogin() {
+  if (typeof window === "undefined") return;
+  Object.keys(window.sessionStorage)
+    .filter((key) => key.startsWith("tapas-install-card-dismissed:home") || key.startsWith("tapas-install-card-dismissed:profile"))
+    .forEach((key) => window.sessionStorage.removeItem(key));
+}

@@ -7,6 +7,8 @@ import { InstallAppCard } from "@/components/InstallAppCard";
 import { Logo } from "@/components/Logo";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { resetInstallCardsForNextLogin } from "@/lib/install";
 import {
   IconActivity,
   IconArrowRight,
@@ -14,16 +16,11 @@ import {
   IconFileText,
   IconInstall,
   IconRuler,
-  IconRoutine,
 } from "@/components/Icons";
 
 const PROFILE_LINKS = [
-  { href: "/profile/personal", label: "Goals & Basic Info", Icon: IconEdit },
+  { href: "/profile/personal", label: "Personal Details", Icon: IconEdit },
   { href: "/profile/measurements", label: "Measurements", Icon: IconRuler },
-];
-
-const ACTIVITY_LINKS = [
-  { href: "/profile/routines", label: "Routines", Icon: IconRoutine },
   { href: "/profile/activity", label: "Account Activity", Icon: IconActivity },
 ];
 
@@ -55,7 +52,10 @@ export default function ProfilePage() {
     URL.revokeObjectURL(url);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) await supabase.auth.signOut();
+    resetInstallCardsForNextLogin();
     s.logout();
     router.replace("/login");
   };
@@ -102,22 +102,8 @@ export default function ProfilePage() {
             {s.profile.email || "Profile"}
           </p>
         </div>
-        <Link
-          href="/profile/personal"
-          className="icon-btn"
-          aria-label="Edit name and email"
-          title="Edit name and email"
-          style={{ width: 38, height: 38, flexShrink: 0 }}
-        >
-          <IconEdit width={17} height={17} />
-        </Link>
       </section>
-      <div style={{ marginBottom: 30 }}>
-        <InstallAppCard />
-      </div>
-
-      <ProfileGroup title="Profile" items={PROFILE_LINKS} />
-      <ProfileGroup title="Activity" items={ACTIVITY_LINKS} />
+      <ProfileGroup items={PROFILE_LINKS} />
 
       <section style={{ marginTop: 30, marginBottom: 28 }}>
         <h2 className="uppercase-label" style={{ marginBottom: 12 }}>
@@ -138,6 +124,9 @@ export default function ProfilePage() {
           borderTop: "1px solid rgba(61,74,62,0.45)",
         }}
       >
+        <div style={{ width: "100%" }}>
+          <InstallAppCard placement={`profile:${s.profile.email || "guest"}`} />
+        </div>
         <button className="btn btn-secondary" style={{ width: "min(220px, 100%)" }} onClick={logout}>
           Sign out
         </button>
@@ -145,7 +134,7 @@ export default function ProfilePage() {
           <p className="uppercase-label" style={{ color: "var(--color-text-secondary)", marginBottom: 4 }}>
             TAPAS
           </p>
-          <p className="text-caption">© 2026 All rights reserved</p>
+          <p className="text-caption">© 2026 TAPAS. All rights reserved</p>
           <div className="row center gap-sm" style={{ marginTop: 12, color: "var(--color-text-muted)" }}>
             <Link className="text-caption" href="/profile/privacy">
               Privacy Policy
@@ -162,17 +151,12 @@ export default function ProfilePage() {
 }
 
 function ProfileGroup({
-  title,
   items,
 }: {
-  title: string;
   items: { href: string; label: string; Icon: React.FC<{ width?: number; height?: number; style?: React.CSSProperties }> }[];
 }) {
   return (
     <section style={{ marginBottom: 30 }}>
-      <h2 className="uppercase-label" style={{ marginBottom: 12 }}>
-        {title}
-      </h2>
       <div className="stack gap-sm">
         {items.map(({ href, label, Icon }) => (
           <Link

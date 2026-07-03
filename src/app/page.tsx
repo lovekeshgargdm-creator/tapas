@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Logo, Wordmark } from "@/components/Logo";
@@ -16,15 +16,12 @@ export default function Splash() {
   const onboarded = useStore((s) => s.profile.onboarded);
   const [leaving, setLeaving] = useState(false);
 
-  useEffect(() => {
-    if (!mounted) return;
-    const t = setTimeout(() => {
-      setLeaving(true);
-      const dest = !isAuthed ? "/login" : !onboarded ? "/onboarding" : "/home";
-      setTimeout(() => router.replace(dest), 500);
-    }, 2100);
-    return () => clearTimeout(t);
-  }, [mounted, isAuthed, onboarded, router]);
+  const enterApp = () => {
+    if (!mounted || leaving) return;
+    setLeaving(true);
+    const dest = !isAuthed ? "/login" : !onboarded ? "/onboarding" : "/home";
+    setTimeout(() => router.replace(dest), 320);
+  };
 
   return (
     <main
@@ -78,8 +75,27 @@ export default function Splash() {
               color: "var(--color-text-muted)",
             }}
           >
-            Move · Yoga · Breathe
+            Train · Yoga · Breathe
           </p>
+          <p
+            className="secondary"
+            style={{
+              maxWidth: 340,
+              margin: "16px auto 0",
+              fontSize: 15,
+              lineHeight: 1.55,
+            }}
+          >
+            TAPAS helps you build a daily practice by planning routines, logging workouts, tracking yoga, breathwork, and body progress in one place.
+          </p>
+          <button
+            className="btn btn-primary btn-lg"
+            style={{ marginTop: 24, minWidth: 180 }}
+            onClick={enterApp}
+            disabled={!mounted || leaving}
+          >
+            Enter
+          </button>
         </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -87,7 +103,7 @@ export default function Splash() {
           transition={{ delay: 0.55, duration: 0.5 }}
           style={{ marginTop: 22, width: "min(360px, calc(100vw - 44px))" }}
         >
-          <InstallAppCard compact />
+          <InstallAppCard compact placement="startup" />
         </motion.div>
       </motion.div>
 

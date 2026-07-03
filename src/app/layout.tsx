@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { SupabaseBridge } from "@/components/SupabaseBridge";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,15 +26,15 @@ const devanagari = Noto_Sans_Devanagari({
 });
 
 export const metadata: Metadata = {
-  title: "Tapas — Health & Practice Tracker",
+  title: "TAPAS — Health & Practice Tracker",
   description:
     "One calm place to track movement, yoga, and breathwork. Understand your health routine as a system, not separate apps.",
-  applicationName: "Tapas",
+  applicationName: "TAPAS",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Tapas",
+    title: "TAPAS",
   },
   icons: {
     icon: [
@@ -46,7 +47,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e150f",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7faf4" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e150f" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -60,8 +64,16 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${jetbrains.variable} ${devanagari.variable}`}
+      suppressHydrationWarning
     >
       <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('tapas-theme')||((matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme='dark'}",
+          }}
+        />
+        <SupabaseBridge />
         {children}
         <ServiceWorkerRegister />
         <InstallPrompt />

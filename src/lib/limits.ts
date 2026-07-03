@@ -20,11 +20,11 @@ export const LIMITS = {
 export function clampNumericInput(
   raw: string,
   max: number,
-  options: { decimal?: boolean; onLimit?: () => void } = {},
+  options: { decimal?: boolean; onLimit?: (reason: "max" | "negative") => void } = {},
 ) {
   const hadMinus = raw.includes("-");
   const cleaned = raw.replace(options.decimal ? /[^\d.]/g : /\D/g, "");
-  if (hadMinus) options.onLimit?.();
+  if (hadMinus) options.onLimit?.("negative");
   if (!cleaned) return "";
   const normalized = options.decimal
     ? cleaned.split(".").slice(0, 2).join(".")
@@ -32,7 +32,7 @@ export function clampNumericInput(
   const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) return "";
   if (parsed > max) {
-    options.onLimit?.();
+    options.onLimit?.("max");
     return String(max);
   }
   return normalized;

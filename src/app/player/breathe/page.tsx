@@ -154,6 +154,7 @@ function BreathePlayer() {
 
   const mm = Math.floor(sessionRemain.current / 60);
   const ss = Math.max(0, Math.floor(sessionRemain.current % 60));
+  const totalLabel = `${durationMin} min session`;
 
   return (
     <main style={shell}>
@@ -161,9 +162,9 @@ function BreathePlayer() {
       <div style={{ position: "relative", zIndex: 3, display: "flex", justifyContent: "space-between", padding: "calc(14px + env(safe-area-inset-top)) 16px 0" }}>
         <button className="icon-btn" onClick={exit} aria-label="Close"><IconClose /></button>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontWeight: 700, color: "#73fd9c" }}>{tech.name}</div>
+          <div style={{ fontWeight: 700, color: "var(--color-breathe)" }}>{tech.name}</div>
           <div className="text-mono" style={{ fontSize: 11, letterSpacing: "0.18em", color: "var(--color-text-muted)", textTransform: "uppercase" }}>
-            {tech.ratio.inhale}-{tech.ratio.holdIn}-{tech.ratio.exhale}-{tech.ratio.holdOut}
+            {totalLabel} · {tech.ratio.inhale}-{tech.ratio.holdIn}-{tech.ratio.exhale}-{tech.ratio.holdOut} rhythm
           </div>
         </div>
         <button className="icon-btn" onClick={() => setPrefs({ sound: !prefs.sound })} aria-label="Sound">
@@ -230,7 +231,7 @@ function BreathePlayer() {
               <IconCheck width={40} height={40} style={{ color: "#73fd9c" }} />
             </motion.div>
             <h2 style={{ fontSize: 24, fontWeight: 700 }}>Beautifully done.</h2>
-            <p className="secondary" style={{ marginTop: 8, textAlign: "center" }}>How do you feel now?</p>
+            <p className="secondary" style={{ marginTop: 8, textAlign: "center" }}>How do you feel right now?</p>
             <div className="row center gap-sm" style={{ margin: "20px 0" }}>
               {MOODS.map((m, i) => (
                 <button key={i} onClick={() => setPostMood(i + 1)} style={{

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   IconToday,
-  IconPatterns,
   IconRoutine,
   IconUser,
 } from "./Icons";
@@ -12,7 +11,6 @@ import {
 const TABS = [
   { href: "/home", label: "Home", Icon: IconToday },
   { href: "/routine", label: "Routine", Icon: IconRoutine },
-  { href: "/library", label: "Library", Icon: IconPatterns },
   { href: "/profile", label: "Profile", Icon: IconUser },
 ];
 

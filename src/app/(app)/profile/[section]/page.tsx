@@ -5,20 +5,23 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { InstallAppCard } from "@/components/InstallAppCard";
-import { Logo } from "@/components/Logo";
 import { DOSHA_INFO } from "@/lib/seed";
 import { uid, todayISO, useStore } from "@/lib/store";
 import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { useMounted } from "@/lib/useMounted";
 import {
   IconCheck,
+  IconCopy,
   IconEdit,
-  IconSettings,
+  IconSearch,
+  IconShield,
+  IconStar,
+  IconTrash,
 } from "@/components/Icons";
-import type { Gender } from "@/lib/types";
+import type { Gender, RoutineItem, WeeklyRoutine } from "@/lib/types";
 
 const TITLES: Record<string, string> = {
-  personal: "Profile & Account",
+  personal: "Personal Details",
   measurements: "Measurements",
   routines: "Routines",
   activity: "Account Activity",
@@ -33,6 +36,20 @@ const GOALS = [
   { id: "stress", label: "Reduce stress & breathe better" },
   { id: "consistency", label: "Build consistency" },
 ];
+
+const initials = (name: string, email: string) => {
+  const source = name.trim() || email.split("@")[0] || "T";
+  const parts = source.split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
+};
+
+function cloneRoutineItem(item: RoutineItem): RoutineItem {
+  return {
+    ...item,
+    id: uid(),
+    sets: item.sets.map((set) => ({ ...set, id: uid() })),
+  };
+}
 
 export default function ProfileSectionPage() {
   const mounted = useMounted();
@@ -63,6 +80,8 @@ export default function ProfileSectionPage() {
   const [mCalves, setMCalves] = useState("");
   const [mNeck, setMNeck] = useState("");
   const [saved, setSaved] = useState(false);
+  const [profileRoutineSearch, setProfileRoutineSearch] = useState("");
+  const [profileRoutineFilter, setProfileRoutineFilter] = useState<"all" | "favorites">("all");
 
   useEffect(() => {
     if (!mounted) return;
@@ -86,6 +105,16 @@ export default function ProfileSectionPage() {
   const accountLogs = useMemo(
     () => [...(s.accountLogs || [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [s.accountLogs],
+  );
+
+  const profileRoutineList = useMemo(
+    () =>
+      [...(s.weeklyRoutines || [])]
+        .filter((routine) => routine.module === "train" || routine.module === "combined" || routine.module === "yoga")
+        .filter((routine) => profileRoutineFilter === "all" || routine.favorite)
+        .filter((routine) => routine.name.toLowerCase().includes(profileRoutineSearch.toLowerCase()))
+        .sort((a, b) => Number(b.favorite) - Number(a.favorite) || new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [s.weeklyRoutines, profileRoutineFilter, profileRoutineSearch],
   );
 
   if (!mounted) return <div className="page" />;
@@ -161,8 +190,31 @@ export default function ProfileSectionPage() {
     setTimeout(() => setSaved(false), 1800);
   };
 
-  const showLimit = (label: string, max: number, unit = "") => {
-    setInputError(`${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}. Negative values are not allowed.`);
+  const toggleRoutineFavorite = (routine: WeeklyRoutine) => {
+    s.saveWeeklyRoutine({ ...routine, favorite: !routine.favorite, updatedAt: todayISO() });
+  };
+
+  const duplicateRoutine = (routine: WeeklyRoutine) => {
+    s.saveWeeklyRoutine({
+      ...routine,
+      id: uid(),
+      name: `${routine.name} Copy`,
+      favorite: false,
+      days: routine.days.map((day) => ({
+        ...day,
+        items: day.items.map(cloneRoutineItem),
+      })),
+      createdAt: todayISO(),
+      updatedAt: todayISO(),
+    });
+  };
+
+  const showLimit = (label: string, max: number, unit = "", reason: "max" | "negative" = "max") => {
+    setInputError(
+      reason === "negative"
+        ? `${label} cannot be negative.`
+        : `${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}.`,
+    );
   };
 
   const heightDisplay = () => {
@@ -186,7 +238,7 @@ export default function ProfileSectionPage() {
 
       {section === "personal" && (
         <div>
-          <section className="card" style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 18 }}>
+          <section className="card" style={{ marginBottom: 22, padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
             <div
               style={{
                 width: 72,
@@ -194,104 +246,126 @@ export default function ProfileSectionPage() {
                 borderRadius: "50%",
                 display: "grid",
                 placeItems: "center",
-                overflow: "hidden",
-                border: "1px solid rgba(115,253,156,0.3)",
-                background: "var(--color-surface-main)",
-                flexShrink: 0,
+                border: "2px solid var(--color-mint-active)",
+                background: "rgba(115,253,156,0.08)",
+                color: "var(--color-mint-active)",
+                fontSize: 26,
+                fontWeight: 800,
+                flexShrink: 0
               }}
             >
-              <Logo size={68} />
+              {initials(s.profile.name, s.profile.email)}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               {editingAccount ? (
                 <div className="stack gap-xs">
                   <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Name" style={{ minHeight: 38 }} />
                   <input className="input" type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email" style={{ minHeight: 38 }} />
+                  <button
+                    className="btn btn-primary"
+                    onClick={saveAccount}
+                    disabled={!editName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim())}
+                    style={{ padding: "8px 12px", fontSize: 13, minHeight: 34, marginTop: 4 }}
+                  >
+                    <IconCheck width={15} height={15} /> Save
+                  </button>
                 </div>
               ) : (
                 <>
-                  <h2 style={{ fontSize: 24, fontWeight: 700, letterSpacing: 0 }}>{s.profile.name || "Practitioner"}</h2>
+                  <h2 style={{ fontSize: 22, fontWeight: 700, letterSpacing: 0, overflow: "hidden", textOverflow: "ellipsis" }}>{s.profile.name || "Practitioner"}</h2>
                   <p className="text-caption" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis" }}>
                     {s.profile.email}
                   </p>
                 </>
               )}
             </div>
-            <button
-              className="icon-btn"
-              onClick={() => (editingAccount ? saveAccount() : setEditingAccount(true))}
-              aria-label="Edit name and email"
-              disabled={editingAccount && (!editName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail.trim()))}
-              style={{ width: 38, height: 38, flexShrink: 0 }}
-            >
-              {editingAccount ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
-            </button>
+            {!editingAccount && (
+              <button
+                className="icon-btn"
+                onClick={() => setEditingAccount(true)}
+                aria-label="Edit name and email"
+                title="Edit name and email"
+                style={{ flexShrink: 0, width: 38, height: 38, color: "var(--color-mint-active)" }}
+              >
+                <IconEdit width={17} height={17} />
+              </button>
+            )}
           </section>
 
-          {dosha && (
-            <section className="card" style={{ marginBottom: 18 }}>
-              <div className="row between" style={{ gap: 12, marginBottom: 10 }}>
-                <SectionTitle>Ayurvedic Profile</SectionTitle>
-                <Link href="/onboarding?retake=true" className="pill pill-active" style={{ textDecoration: "none" }}>
-                  Retake quiz
-                </Link>
-              </div>
-              <h3 style={{ fontSize: 19, fontWeight: 700 }}>{dosha.name}</h3>
-              <p className="secondary" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
-                {dosha.blurb}
-              </p>
-            </section>
-          )}
-
           <section className="card" style={{ marginBottom: 18 }}>
-            <div className="row between" style={{ marginBottom: 12 }}>
-              <SectionTitle>Goals</SectionTitle>
-              <button className="icon-btn" onClick={() => (editingGoals ? saveGoals() : setEditingGoals(true))} aria-label="Edit goals">
-                {editingGoals ? <IconCheck width={17} height={17} /> : <IconSettings width={17} height={17} />}
+            <div className="row between" style={{ gap: 12, marginBottom: 10 }}>
+              <SectionTitle>Ayurvedic Profile</SectionTitle>
+              <Link href="/onboarding?retake=true" className="pill pill-active" style={{ textDecoration: "none" }}>
+                {dosha ? "Retake quiz" : "Take quiz"}
+              </Link>
+            </div>
+            {dosha ? (
+              <>
+                <h3 style={{ fontSize: 19, fontWeight: 700 }}>{dosha.name}</h3>
+                <p className="secondary" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
+                  {dosha.blurb}
+                </p>
+              </>
+            ) : (
+              <p className="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
+                Not determined yet. Take the dosha quiz to personalize your experience.
+              </p>
+            )}
+          </section>
+
+          <section className="card" style={{ marginBottom: 20, padding: "20px 16px" }}>
+            <div className="row between" style={{ marginBottom: 16 }}>
+              <SectionTitle>Active Focus Areas</SectionTitle>
+              <button className="icon-btn" onClick={() => (editingGoals ? saveGoals() : setEditingGoals(true))} aria-label="Edit goals" style={{ color: "var(--color-mint-active)" }}>
+                {editingGoals ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
               </button>
             </div>
             {editingGoals ? (
               <div className="stack gap-sm">
-                {GOALS.map((goal) => (
-                  <button
-                    key={goal.id}
-                    className={`chip ${goalDraft.includes(goal.id) ? "active" : ""}`}
-                    onClick={() => toggleGoal(goal.id)}
-                    style={{ width: "100%", justifyContent: "center" }}
-                  >
-                    {goal.label}
-                  </button>
-                ))}
+                <div className="row gap-sm wrap" style={{ marginBottom: 12 }}>
+                  {GOALS.map((goal) => (
+                    <button
+                      key={goal.id}
+                      className={`chip ${goalDraft.includes(goal.id) ? "active" : ""}`}
+                      onClick={() => toggleGoal(goal.id)}
+                      style={{ justifyContent: "center", minHeight: 42, paddingInline: 16, border: goalDraft.includes(goal.id) ? "1px solid rgba(115,253,156,0.55)" : "1px solid rgba(115,253,156,0.18)" }}
+                    >
+                      {goal.label}
+                    </button>
+                  ))}
+                </div>
                 <button className="btn btn-primary btn-block" onClick={saveGoals}>Save Goals</button>
               </div>
             ) : s.profile.goals.length > 0 ? (
               <div className="row gap-sm wrap">
                 {s.profile.goals.map((goal) => (
-                  <span className="pill pill-active" key={goal}>
+                  <span className="pill pill-active" key={goal} style={{ padding: "6px 12px", fontSize: 13 }}>
                     {GOALS.find((item) => item.id === goal)?.label || goal}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="text-caption">No goals selected yet.</p>
+              <div style={{ padding: "12px 0", textAlign: "center" }}>
+                <p className="text-caption">No goals selected yet.</p>
+              </div>
             )}
           </section>
 
-          <section className="card" style={{ marginBottom: 18 }}>
-            <div className="row between" style={{ marginBottom: 14 }}>
-              <SectionTitle>Basic Info</SectionTitle>
-              <button className="icon-btn" onClick={() => (editing ? savePersonal() : setEditing(true))} aria-label="Edit info">
-                {editing ? <IconCheck width={17} height={17} /> : <IconSettings width={17} height={17} />}
+          <section className="card" style={{ marginBottom: 20, padding: "20px 16px" }}>
+            <div className="row between" style={{ marginBottom: 16 }}>
+              <SectionTitle>Physical Profile</SectionTitle>
+              <button className="icon-btn" onClick={() => (editing ? savePersonal() : setEditing(true))} aria-label="Edit info" style={{ color: "var(--color-mint-active)" }}>
+                {editing ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
               </button>
             </div>
             {inputError && <LimitNotice message={inputError} />}
             {editing ? (
-              <div className="stack gap-sm">
+              <div className="stack gap-md" style={{ padding: "4px 0" }}>
                 <Field label="Age">
-                  <input className="input" type="number" inputMode="numeric" min="1" max={LIMITS.age} value={editAge} onChange={(e) => setEditAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: () => showLimit("Age", LIMITS.age) }))} />
+                  <input className="input" type="number" inputMode="numeric" min="1" max={LIMITS.age} value={editAge} onChange={(e) => setEditAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: (reason) => showLimit("Age", LIMITS.age, "", reason) }))} style={{ background: "var(--color-surface-1)" }} />
                 </Field>
                 <Field label="Gender">
-                  <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value as Gender)}>
+                  <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value as Gender)} style={{ background: "var(--color-surface-1)" }}>
                     <option value="">Select</option>
                     <option value="male">Male</option>
                     <option value="female">Female</option>
@@ -299,14 +373,14 @@ export default function ProfileSectionPage() {
                   </select>
                 </Field>
                 <Field label="Height (cm)">
-                  <input className="input" type="number" inputMode="decimal" min="50" max={LIMITS.heightCm} value={editHeight} onChange={(e) => setEditHeight(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: () => showLimit("Height", LIMITS.heightCm, "cm") }))} />
+                  <input className="input" type="number" inputMode="decimal" min="50" max={LIMITS.heightCm} value={editHeight} onChange={(e) => setEditHeight(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: (reason) => showLimit("Height", LIMITS.heightCm, "cm", reason) }))} style={{ background: "var(--color-surface-1)" }} />
                 </Field>
-                <button className="btn btn-primary btn-block" onClick={savePersonal}>
+                <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} onClick={savePersonal}>
                   Save
                 </button>
               </div>
             ) : (
-              <div style={{ borderTop: "1px solid var(--color-outline-muted)" }}>
+              <div className="stack" style={{ gap: 0 }}>
                 <MetricRow label="Age" value={s.profile.age ? `${s.profile.age} years` : "-"} />
                 <MetricRow label="Gender" value={genderLabel(s.profile.gender)} />
                 <MetricRow label="Height" value={heightDisplay()} />
@@ -314,17 +388,20 @@ export default function ProfileSectionPage() {
             )}
           </section>
 
-          <section className="card" style={{ marginBottom: 18 }}>
-            <SectionTitle>Change Password</SectionTitle>
-            <div className="stack gap-sm" style={{ marginTop: 12 }}>
+          <section className="card" style={{ marginBottom: 20, padding: "20px 16px" }}>
+            <div className="row gap-sm" style={{ marginBottom: 16, color: "var(--color-mint-active)" }}>
+              <IconShield width={22} height={22} />
+              <SectionTitle>Account Security</SectionTitle>
+            </div>
+            <div className="stack gap-sm">
               <Field label="Current password">
-                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={{ background: "var(--color-surface-1)" }} />
               </Field>
               <Field label="New password">
-                <input className="input" type="password" minLength={8} value={nextPassword} onChange={(e) => setNextPassword(e.target.value)} />
+                <input className="input" type="password" minLength={8} value={nextPassword} onChange={(e) => setNextPassword(e.target.value)} style={{ background: "var(--color-surface-1)" }} />
               </Field>
               {passwordMessage && <p className="text-caption">{passwordMessage}</p>}
-              <button className="btn btn-primary btn-block" onClick={savePassword} disabled={!currentPassword || nextPassword.length < 8}>
+              <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} onClick={savePassword} disabled={!currentPassword || nextPassword.length < 8}>
                 Update Password
               </button>
             </div>
@@ -335,68 +412,112 @@ export default function ProfileSectionPage() {
       )}
 
       {section === "measurements" && (
-        <div>
-          <section className="card" style={{ marginBottom: 20 }}>
-            <SectionTitle>Latest Saved</SectionTitle>
-            {s.body.length > 0 ? (
-              <div>
-                <p className="text-caption" style={{ marginBottom: 12 }}>
-                  Recorded {new Date(s.body[0].date).toLocaleDateString()}
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-                  {s.body[0].weight && <MetricTile label="Weight" value={`${s.body[0].weight} kg`} tone="#8fd4ff" />}
-                  {s.body[0].chest && <MetricTile label="Chest" value={`${s.body[0].chest} cm`} tone="#73fd9c" />}
-                  {s.body[0].waist && <MetricTile label="Waist" value={`${s.body[0].waist} cm`} tone="#fdb974" />}
-                  {s.body[0].hips && <MetricTile label="Hips" value={`${s.body[0].hips} cm`} tone="#2ee5b5" />}
-                  {s.body[0].arms && <MetricTile label="Arms" value={`${s.body[0].arms} cm`} tone="#9b8dce" />}
-                  {s.body[0].thighs && <MetricTile label="Thighs" value={`${s.body[0].thighs} cm`} tone="#7ecfff" />}
-                  {s.body[0].calves && <MetricTile label="Calves" value={`${s.body[0].calves} cm`} tone="#aad4b8" />}
-                  {s.body[0].neck && <MetricTile label="Neck" value={`${s.body[0].neck} cm`} tone="#ef8c8c" />}
-                </div>
+        <div style={{ paddingBottom: 80 }}>
+          <section className="card" style={{ padding: "14px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-surface-3)", color: "var(--color-mint-active)", display: "grid", placeItems: "center" }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="text-caption" style={{ fontSize: 12 }}>Last Updated</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>
+                {s.body.length > 0 ? new Date(s.body[0].date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No measurements yet"}
               </div>
-            ) : (
-              <p className="text-caption">No measurements recorded yet.</p>
-            )}
+            </div>
           </section>
 
-          <section className="card">
-            <SectionTitle>Update Measurements</SectionTitle>
-            {inputError && <LimitNotice message={inputError} />}
-            <div className="stack gap-sm" style={{ marginTop: 14 }}>
-              <MeasurementInput label="Weight" unit="kg" value={mWeight} onChange={setMWeight} max={LIMITS.weightKg} onLimit={() => showLimit("Weight", LIMITS.weightKg, "kg")} />
-              <MeasurementInput label="Chest" unit="cm" value={mChest} onChange={setMChest} max={LIMITS.chestCm} onLimit={() => showLimit("Chest", LIMITS.chestCm, "cm")} />
-              <MeasurementInput label="Waist" unit="cm" value={mWaist} onChange={setMWaist} max={LIMITS.waistCm} onLimit={() => showLimit("Waist", LIMITS.waistCm, "cm")} />
-              <MeasurementInput label="Hips" unit="cm" value={mHips} onChange={setMHips} max={LIMITS.hipsCm} onLimit={() => showLimit("Hips", LIMITS.hipsCm, "cm")} />
-              <MeasurementInput label="Arms" unit="cm" value={mArms} onChange={setMArms} max={LIMITS.armsCm} onLimit={() => showLimit("Arms", LIMITS.armsCm, "cm")} />
-              <MeasurementInput label="Thighs" unit="cm" value={mThighs} onChange={setMThighs} max={LIMITS.thighsCm} onLimit={() => showLimit("Thighs", LIMITS.thighsCm, "cm")} />
-              <MeasurementInput label="Calves" unit="cm" value={mCalves} onChange={setMCalves} max={LIMITS.calvesCm} onLimit={() => showLimit("Calves", LIMITS.calvesCm, "cm")} />
-              <MeasurementInput label="Neck" unit="cm" value={mNeck} onChange={setMNeck} max={LIMITS.neckCm} onLimit={() => showLimit("Neck", LIMITS.neckCm, "cm")} />
-            </div>
-            <button className="btn btn-primary btn-block" style={{ marginTop: 22 }} onClick={saveMeasurements}>
+          {inputError && <LimitNotice message={inputError} />}
+          
+          <div className="stack gap-sm">
+            <MeasurementCard label="Weight" unit="kg" latest={s.body[0]?.weight} value={mWeight} onChange={setMWeight} max={LIMITS.weightKg} onLimit={(reason) => showLimit("Weight", LIMITS.weightKg, "kg", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Body Fat" unit="%" latest={0} value={""} onChange={() => {}} max={100} onLimit={() => {}} tone="var(--color-text-main)" />
+            <MeasurementCard label="Chest" unit="cm" latest={s.body[0]?.chest} value={mChest} onChange={setMChest} max={LIMITS.chestCm} onLimit={(reason) => showLimit("Chest", LIMITS.chestCm, "cm", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Waist" unit="cm" latest={s.body[0]?.waist} value={mWaist} onChange={setMWaist} max={LIMITS.waistCm} onLimit={(reason) => showLimit("Waist", LIMITS.waistCm, "cm", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Hips" unit="cm" latest={s.body[0]?.hips} value={mHips} onChange={setMHips} max={LIMITS.hipsCm} onLimit={(reason) => showLimit("Hips", LIMITS.hipsCm, "cm", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Arms" unit="cm" latest={s.body[0]?.arms} value={mArms} onChange={setMArms} max={LIMITS.armsCm} onLimit={(reason) => showLimit("Arms", LIMITS.armsCm, "cm", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Thighs" unit="cm" latest={s.body[0]?.thighs} value={mThighs} onChange={setMThighs} max={LIMITS.thighsCm} onLimit={(reason) => showLimit("Thighs", LIMITS.thighsCm, "cm", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Calves" unit="cm" latest={s.body[0]?.calves} value={mCalves} onChange={setMCalves} max={LIMITS.calvesCm} onLimit={(reason) => showLimit("Calves", LIMITS.calvesCm, "cm", reason)} tone="var(--color-text-main)" />
+            <MeasurementCard label="Neck" unit="cm" latest={s.body[0]?.neck} value={mNeck} onChange={setMNeck} max={LIMITS.neckCm} onLimit={(reason) => showLimit("Neck", LIMITS.neckCm, "cm", reason)} tone="var(--color-text-main)" />
+          </div>
+
+          <p style={{ textAlign: "center", color: "var(--color-text-muted)", fontSize: 13, fontStyle: "italic", marginTop: 32, padding: "0 20px" }}>
+            Consistency is the secret to measurable progress. Breathe through the journey.
+          </p>
+          
+          <div style={{ position: "sticky", bottom: 100, zIndex: 10, padding: "10px 0" }}>
+            <button className="btn btn-primary btn-block" style={{ height: 50, background: "var(--color-mint-active)", color: "#000", fontWeight: 700, boxShadow: "0 8px 16px rgba(0,0,0,0.6)" }} onClick={saveMeasurements}>
               {saved ? "Saved" : "Save Measurements"}
             </button>
-          </section>
+          </div>
         </div>
       )}
 
       {section === "routines" && (
         <div className="stack gap-sm">
           {s.weeklyRoutines.length > 0 ? (
-            s.weeklyRoutines.map((routine) => (
-              <section className="card" key={routine.id}>
-                <div className="row between" style={{ gap: 12 }}>
-                  <div>
-                    <h2 style={{ fontSize: 17, fontWeight: 700 }}>{routine.name}</h2>
-                    <p className="text-caption" style={{ marginTop: 4 }}>
-                      {routine.module === "train" ? "Training" : routine.module === "yoga" ? "Yoga" : "Combined"} -
-                      {" "}
-                      {routine.days.filter((day) => day.enabled).length} active days
-                    </p>
-                  </div>
-                  <span className="pill pill-active">{routine.module}</span>
-                </div>
-              </section>
-            ))
+            <>
+              <div style={{ position: "relative" }}>
+                <IconSearch width={18} height={18} style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+                <input className="input input-with-icon" placeholder="Search routines..." value={profileRoutineSearch} onChange={(event) => setProfileRoutineSearch(event.target.value)} />
+              </div>
+              <div className="row gap-xs" style={{ marginBottom: 6 }}>
+                <button className={`chip ${profileRoutineFilter === "all" ? "active" : ""}`} onClick={() => setProfileRoutineFilter("all")}>All</button>
+                <button className={`chip ${profileRoutineFilter === "favorites" ? "active" : ""}`} onClick={() => setProfileRoutineFilter("favorites")}>
+                  <IconStar width={14} height={14} fill={profileRoutineFilter === "favorites" ? "currentColor" : "none"} /> Favorites
+                </button>
+              </div>
+              {profileRoutineList.length > 0 ? (
+                profileRoutineList.map((routine) => {
+                  const activeDays = routine.days.filter((day) => day.enabled);
+                  const itemCount = activeDays.reduce((sum, day) => sum + day.items.length, 0);
+                  return (
+                    <section className="card" key={routine.id}>
+                      <div className="row between" style={{ gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div className="row gap-xs wrap">
+                            <h2 style={{ fontSize: 17, fontWeight: 700 }}>{routine.name}</h2>
+                            {routine.favorite && <span className="pill pill-active" style={{ padding: "3px 8px", fontSize: 11 }}>Favorite</span>}
+                          </div>
+                          <p className="text-caption" style={{ marginTop: 4 }}>
+                            {routine.module === "train" ? "Train" : routine.module === "yoga" ? "Yoga" : "Combined"} · {activeDays.length} active days · {itemCount} item{itemCount === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                        <button className="icon-btn" onClick={() => toggleRoutineFavorite(routine)} aria-label={routine.favorite ? "Remove favorite" : "Mark favorite"} title={routine.favorite ? "Remove favorite" : "Mark favorite"} style={{ width: 34, height: 34, color: routine.favorite ? "var(--color-warning-soft)" : "var(--color-text-muted)" }}>
+                          <IconStar width={16} height={16} fill={routine.favorite ? "currentColor" : "none"} />
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", gap: 5, marginBottom: 12 }}>
+                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label, index) => {
+                          const day = routine.days.find((item) => item.day === index);
+                          return (
+                            <div key={label} style={{ flex: 1, textAlign: "center", padding: "6px 2px", borderRadius: 8, fontSize: 10, fontWeight: 700, background: day?.enabled ? "rgba(115,253,156,0.15)" : "var(--color-surface-main)", color: day?.enabled ? "var(--color-mint-active)" : "var(--color-text-muted)" }}>
+                              {label}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 8 }}>
+                        <Link className="btn btn-primary" href={`/routine?edit=${encodeURIComponent(routine.id)}`} style={{ minHeight: 38 }}>
+                          <IconEdit width={16} height={16} /> Edit
+                        </Link>
+                        <button className="icon-btn" onClick={() => duplicateRoutine(routine)} aria-label="Duplicate routine" title="Duplicate routine" style={{ width: 38, height: 38 }}>
+                          <IconCopy width={16} height={16} />
+                        </button>
+                        <button className="icon-btn" onClick={() => toggleRoutineFavorite(routine)} aria-label={routine.favorite ? "Remove favorite" : "Mark favorite"} title={routine.favorite ? "Remove favorite" : "Mark favorite"} style={{ width: 38, height: 38, color: routine.favorite ? "var(--color-warning-soft)" : "var(--color-text-muted)" }}>
+                          <IconStar width={16} height={16} fill={routine.favorite ? "currentColor" : "none"} />
+                        </button>
+                        <button className="icon-btn" onClick={() => s.deleteWeeklyRoutine(routine.id)} aria-label="Delete routine" title="Delete routine" style={{ width: 38, height: 38, color: "var(--color-status-error)" }}>
+                          <IconTrash width={15} height={15} />
+                        </button>
+                      </div>
+                    </section>
+                  );
+                })
+              ) : (
+                <section className="card" style={{ textAlign: "center" }}>
+                  <p className="text-caption">No routines match this search or filter.</p>
+                </section>
+              )}
+            </>
           ) : (
             <section className="card" style={{ textAlign: "center" }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>No routines yet</h2>
@@ -443,7 +564,7 @@ export default function ProfileSectionPage() {
         <section className="card">
           <SectionTitle>Support</SectionTitle>
           <p className="secondary" style={{ lineHeight: 1.7 }}>
-            Need help with Tapas or AEROLINK? Contact support and include your account email so we can help faster.
+            Need help with TAPAS or AEROLINK? Contact support and include your account email so we can help faster.
           </p>
           <div style={{ borderTop: "1px solid var(--color-outline-muted)", marginTop: 18 }}>
             <MetricRow label="Email" value="support@aerolink.com" />
@@ -457,7 +578,7 @@ export default function ProfileSectionPage() {
           title="Your privacy is our priority."
           items={[
             "We do not sell your personal data.",
-            "Practice, body, and routine data stay in your Tapas app state unless you export it.",
+            "Practice, body, and routine data stay in your TAPAS app state unless you export it.",
             "You can sign out to clear local practice data on this device.",
             "Use export when you want a personal backup of your data.",
           ]}
@@ -468,7 +589,7 @@ export default function ProfileSectionPage() {
         <LegalPage
           title="Terms of Service"
           items={[
-            "Tapas provides wellness tracking and practice guidance, not medical advice.",
+            "TAPAS provides wellness tracking and practice guidance, not medical advice.",
             "Consult a qualified professional before starting routines if you have health concerns.",
             "You are responsible for practicing within your current capacity.",
             "AEROLINK may update these terms as the product evolves.",
@@ -509,33 +630,63 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function MetricRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="row between" style={{ padding: "13px 0", borderBottom: "1px solid var(--color-outline-muted)", gap: 12 }}>
-      <span className="text-caption">{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 700, textAlign: "right" }}>{value}</span>
+    <div className="row between" style={{ padding: "16px 0", borderBottom: "1px solid var(--color-surface-3)", gap: 12 }}>
+      <span className="text-caption" style={{ fontSize: 13 }}>{label}</span>
+      <span style={{ fontSize: 14, fontWeight: 700, textAlign: "right", color: "var(--color-text-primary)" }}>{value}</span>
     </div>
   );
 }
 
-function MetricTile({ label, value, tone }: { label: string; value: string; tone: string }) {
+function MeasurementCard({
+  label,
+  latest,
+  value,
+  onChange,
+  max,
+  unit,
+  onLimit,
+}: {
+  label: string;
+  latest?: number;
+  value: string;
+  onChange: (v: string) => void;
+  max: number;
+  unit: string;
+  onLimit: (reason: "max" | "negative") => void;
+  tone: string;
+}) {
   return (
-    <div
-      style={{
-        minHeight: 82,
-        padding: 13,
-        borderRadius: 12,
-        background: `linear-gradient(135deg, ${tone}1f, rgba(255,255,255,0.025))`,
-        border: `1px solid ${tone}40`,
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-      }}
-    >
-      <div className="row between" style={{ gap: 8 }}>
-        <div className="text-caption">{label}</div>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", background: tone, boxShadow: `0 0 12px ${tone}99` }} />
+    <section className="card" style={{ padding: 16, marginBottom: 0 }}>
+      <div className="row between" style={{ marginBottom: 16, alignItems: "flex-start" }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 700 }}>{label}</h3>
+          <p className="text-caption" style={{ marginTop: 4 }}>
+            Latest: <span style={{ marginLeft: 8 }}>{latest ? latest.toFixed(label === "Weight" ? 1 : 0) : "--"}</span>
+          </p>
+        </div>
+        <div style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", lineHeight: 1.15 }}>
+          {unit.toUpperCase().split("").map((c, i) => <div key={i}>{c}</div>)}
+        </div>
       </div>
-      <div className="text-mono" style={{ marginTop: 10, fontSize: 20, fontWeight: 700, color: tone }}>
-        {value}
-      </div>
-    </div>
+      <input
+        type="number"
+        value={value}
+        placeholder="00.0"
+        onChange={(e) => {
+          onChange(clampNumericInput(e.target.value, max, { decimal: true, onLimit }));
+        }}
+        style={{
+          width: "100%",
+          padding: "14px 16px",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--color-surface-2)",
+          color: "var(--color-mint-active)",
+          fontSize: 16,
+          outline: "none",
+        }}
+      />
+    </section>
   );
 }
 
@@ -554,52 +705,6 @@ function LimitNotice({ message }: { message: string }) {
       }}
     >
       {message}
-    </div>
-  );
-}
-
-function MeasurementInput({
-  label,
-  value,
-  onChange,
-  max,
-  unit,
-  onLimit,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  max: number;
-  unit: string;
-  onLimit: () => void;
-}) {
-  return (
-    <div
-      className="row between"
-      style={{
-        gap: 12,
-        padding: "11px 12px",
-        borderRadius: 12,
-        background: "linear-gradient(135deg, rgba(115,253,156,0.07), rgba(255,255,255,0.02))",
-        border: "1px solid rgba(115,253,156,0.14)",
-      }}
-    >
-      <span style={{ fontSize: 14, fontWeight: 700 }}>{label}</span>
-      <div className="row gap-xs" style={{ flexShrink: 0 }}>
-        <input
-          type="number"
-          className="input"
-          value={value}
-          placeholder="0"
-          onChange={(e) => {
-            onChange(clampNumericInput(e.target.value, max, { decimal: true, onLimit }));
-          }}
-          style={{ width: 92, padding: "8px 10px", textAlign: "right", minHeight: 38 }}
-        />
-        <span className="text-caption" style={{ width: 22 }}>
-          {unit}
-        </span>
-      </div>
     </div>
   );
 }

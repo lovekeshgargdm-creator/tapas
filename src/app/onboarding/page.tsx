@@ -10,13 +10,13 @@ import { useStore } from "@/lib/store";
 import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { DOSHA_QUIZ, DOSHA_INFO } from "@/lib/seed";
 import type { Dosha, Gender, HeightUnit, WeightUnit } from "@/lib/types";
-import { IconArrowRight, IconCheck, IconSparkle } from "@/components/Icons";
+import { IconArrowRight, IconCheck, IconSparkle, IconTrain, IconYoga, IconBreathe, IconFlame } from "@/components/Icons";
 
 const GOALS = [
-  { id: "strength", label: "Get stronger", emoji: "💪" },
-  { id: "flexible", label: "Get more flexible", emoji: "🧘" },
-  { id: "stress", label: "Reduce stress & breathe better", emoji: "🌬️" },
-  { id: "consistency", label: "Build consistency", emoji: "🔥" },
+  { id: "strength", label: "Get stronger", icon: IconTrain },
+  { id: "flexible", label: "Get more flexible", icon: IconYoga },
+  { id: "stress", label: "Reduce stress & breathe better", icon: IconBreathe },
+  { id: "consistency", label: "Build consistency", icon: IconFlame },
 ];
 
 type Step = "intro" | "quiz" | "result" | "goals" | "personal" | "ready";
@@ -129,8 +129,12 @@ export default function Onboarding() {
     router.replace("/home");
   };
 
-  const showLimit = (label: string, max: number, unit = "") => {
-    setInputError(`${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}. Negative values are not allowed.`);
+  const showLimit = (label: string, max: number, unit = "", reason: "max" | "negative" = "max") => {
+    setInputError(
+      reason === "negative"
+        ? `${label} cannot be negative.`
+        : `${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}.`,
+    );
   };
 
   const currentStepIndex = STEPS_ORDER.indexOf(step);
@@ -167,9 +171,9 @@ export default function Onboarding() {
               <div style={{ marginBottom: 18 }}>
                 <InstallAppCard compact />
               </div>
-              <h1 style={h1}>Hi{name ? `, ${name}` : " there"} 👋</h1>
+              <h1 style={h1}>Hi{name ? `, ${name}` : " there"}</h1>
               <p style={sub}>
-                Tapas learns your constitution to personalise your yoga and movement practice.
+                TAPAS learns your constitution to personalise your yoga and movement practice.
                 Take a quick 8-question check-in — or skip and explore.
               </p>
               <div className="stack gap-sm" style={{ marginTop: 26 }}>
@@ -236,7 +240,7 @@ export default function Onboarding() {
                         transition: "all .2s",
                       }}
                     >
-                      <span style={{ fontSize: 22 }}>{g.emoji}</span>
+                      <span style={{ fontSize: 22 }}><g.icon width={22} height={22} /></span>
                       <span style={{ flex: 1, textAlign: "left", fontWeight: 600, fontSize: 15.5 }}>{g.label}</span>
                       <span style={{
                         width: 24, height: 24, borderRadius: 8, display: "grid", placeItems: "center",
@@ -274,7 +278,7 @@ export default function Onboarding() {
                     value={age}
                     min="10"
                     max={LIMITS.age}
-                    onChange={(e) => setAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: () => showLimit("Age", LIMITS.age) }))}
+                    onChange={(e) => setAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: (reason) => showLimit("Age", LIMITS.age, "", reason) }))}
                     style={{ marginTop: 6 }}
                   />
                 </div>
@@ -334,7 +338,7 @@ export default function Onboarding() {
                       value={heightCm}
                       min="50"
                       max={LIMITS.heightCm}
-                      onChange={(e) => setHeightCm(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: () => showLimit("Height", LIMITS.heightCm, "cm") }))}
+                      onChange={(e) => setHeightCm(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: (reason) => showLimit("Height", LIMITS.heightCm, "cm", reason) }))}
                     />
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -346,7 +350,7 @@ export default function Onboarding() {
                         value={heightFt}
                         min="1"
                         max={LIMITS.heightFt}
-                        onChange={(e) => setHeightFt(clampNumericInput(e.target.value, LIMITS.heightFt, { onLimit: () => showLimit("Height", LIMITS.heightFt, "ft") }))}
+                        onChange={(e) => setHeightFt(clampNumericInput(e.target.value, LIMITS.heightFt, { onLimit: (reason) => showLimit("Height", LIMITS.heightFt, "ft", reason) }))}
                       />
                       <input
                         className="input"
@@ -356,7 +360,7 @@ export default function Onboarding() {
                         value={heightIn}
                         min="0"
                         max={LIMITS.heightIn}
-                        onChange={(e) => setHeightIn(clampNumericInput(e.target.value, LIMITS.heightIn, { onLimit: () => showLimit("Inches", LIMITS.heightIn, "in") }))}
+                        onChange={(e) => setHeightIn(clampNumericInput(e.target.value, LIMITS.heightIn, { onLimit: (reason) => showLimit("Inches", LIMITS.heightIn, "in", reason) }))}
                       />
                     </div>
                   )}
@@ -396,7 +400,7 @@ export default function Onboarding() {
                       const val = clampNumericInput(
                         e.target.value,
                         max,
-                        { decimal: true, onLimit: () => showLimit("Weight", max, weightUnit) },
+                        { decimal: true, onLimit: (reason) => showLimit("Weight", max, weightUnit, reason) },
                       );
                       if (weightUnit === "kg") setWeightKg(val);
                       else setWeightLbs(val);

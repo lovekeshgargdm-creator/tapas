@@ -20,25 +20,27 @@ function YogaPlayer() {
   // Session source: a full flow (?flow=) or a single pose (?asana=).
   const asanaParam = params.get("asana");
   const singleAsana = asanaParam ? asanaById(asanaParam) : undefined;
+  const holdParam = Number(params.get("hold") || 0);
 
   const session = useMemo(() => {
     if (singleAsana) {
+      const holdSeconds = Number.isFinite(holdParam) && holdParam > 0 ? holdParam : singleAsana.holdSeconds.intermediate;
       const step: FlowStep = {
         asanaId: singleAsana.id,
-        holdSeconds: singleAsana.holdSeconds.intermediate,
+        holdSeconds,
         side: "both",
         breathCue: "Breathe slow and steady. Soften with every exhale.",
       };
       return {
         id: `pose-${singleAsana.id}`,
         name: singleAsana.nameEnglish,
-        durationMin: Math.max(1, Math.round(singleAsana.holdSeconds.intermediate / 60)),
+        durationMin: Math.max(1, Math.round(holdSeconds / 60)),
         steps: [step],
       };
     }
     const flow = flowById(params.get("flow") || params.get("preset") || "") || FLOWS[0];
     return { id: flow.id, name: flow.name, durationMin: flow.durationMin, steps: flow.sequence };
-  }, [singleAsana, params]);
+  }, [singleAsana, holdParam, params]);
 
   const steps = session.steps;
 
@@ -146,7 +148,7 @@ function YogaPlayer() {
 
       <div style={{ position: "relative", zIndex: 2, display: "flex", justifyContent: "space-between", padding: "calc(14px + env(safe-area-inset-top)) 16px 0" }}>
         <button className="icon-btn" onClick={() => router.replace(returnTo)} aria-label="Close"><IconClose /></button>
-        <div style={{ fontWeight: 700, color: "#2ee5b5", alignSelf: "center" }}>{session.name}</div>
+        <div style={{ fontWeight: 700, color: "var(--color-yoga)", alignSelf: "center" }}>{session.name}</div>
         <button className="icon-btn" onClick={() => setPrefs({ sound: !prefs.sound })} aria-label="Sound">{prefs.sound ? <IconSound /> : <IconMute />}</button>
       </div>
 
@@ -181,7 +183,7 @@ function YogaPlayer() {
             <span className="text-mono" style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{next ? `Next: ${nextAsana?.nameEnglish}` : "Final pose"}</span>
           </div>
           <div style={{ height: 5, borderRadius: 5, background: "var(--color-surface-3)", overflow: "hidden" }}>
-            <motion.div animate={{ width: `${progress}%` }} style={{ height: "100%", background: "linear-gradient(90deg,#2ee5b5,#73fd9c)", borderRadius: 5 }} />
+            <motion.div animate={{ width: `${progress}%` }} style={{ height: "100%", background: "linear-gradient(90deg,var(--color-yoga),var(--color-train))", borderRadius: 5 }} />
           </div>
 
           {/* controls */}

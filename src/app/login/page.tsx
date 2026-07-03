@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Logo, Wordmark } from "@/components/Logo";
@@ -8,33 +8,83 @@ import { Ambient } from "@/components/Ambient";
 import { InstallAppCard } from "@/components/InstallAppCard";
 import { useStore } from "@/lib/store";
 import { IconGoogle, IconArrowRight } from "@/components/Icons";
+import { getSupabaseBrowserClient } from "@/lib/supabase";
+import { prepareSignedInUser } from "@/lib/supabaseSync";
 
 export default function LoginPage() {
   const router = useRouter();
-  const login = useStore((s) => s.login);
+  const isAuthed = useStore((s) => s.isAuthed);
+  const onboarded = useStore((s) => s.profile.onboarded);
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAuthed) router.replace(onboarded ? "/home" : "/onboarding");
+  }, [isAuthed, onboarded, router]);
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setBusy(true);
-    setTimeout(() => {
-      login(email, name || undefined);
-      router.replace("/onboarding");
-    }, 550);
+    setMessage("");
+
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setMessage("Supabase environment keys are missing.");
+      setBusy(false);
+      return;
+    }
+
+    const result =
+      mode === "signup"
+        ? await supabase.auth.signUp({
+            email,
+            password,
+            options: { data: { name: name || email.split("@")[0] } },
+          })
+        : await supabase.auth.signInWithPassword({ email, password });
+
+    if (result.error) {
+      setMessage(result.error.message);
+      setBusy(false);
+      return;
+    }
+
+    if (!result.data.session || !result.data.user) {
+      setMessage("Check your email to confirm your account, then sign in.");
+      setBusy(false);
+      return;
+    }
+
+    const isOnboarded = await prepareSignedInUser(result.data.user);
+    router.replace(isOnboarded ? "/home" : "/onboarding");
   };
 
-  const google = () => {
+  const google = async () => {
     setBusy(true);
-    setTimeout(() => {
-      login("you@gmail.com", "Practitioner");
-      router.replace("/onboarding");
-    }, 550);
+    setMessage("");
+
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) {
+      setMessage("Supabase environment keys are missing.");
+      setBusy(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/login` },
+    });
+
+    if (error) {
+      setMessage(error.message);
+      setBusy(false);
+    }
   };
 
   return (
@@ -78,7 +128,7 @@ export default function LoginPage() {
             <Wordmark size={27} />
           </h1>
           <p style={{ color: "var(--color-text-secondary)", marginTop: 8, fontSize: 15 }}>
-            One calm place for movement, yoga & breath.
+            One calm place for training, yoga & breathing.
           </p>
         </motion.div>
 
@@ -157,6 +207,11 @@ export default function LoginPage() {
               {busy ? "One moment…" : mode === "signin" ? "Sign in" : "Create account"}
               {!busy && <IconArrowRight width={18} height={18} />}
             </button>
+            {message && (
+              <p className="text-caption" style={{ color: "var(--color-text-secondary)", lineHeight: 1.45 }}>
+                {message}
+              </p>
+            )}
           </form>
 
           <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "18px 0" }}>

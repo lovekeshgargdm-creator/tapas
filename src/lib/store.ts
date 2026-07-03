@@ -13,6 +13,7 @@ import type {
   ProgramEnrollment,
   Dosha,
   WeeklyRoutine,
+  RoutineSessionDraft,
   JournalEntry,
   AccountLog,
 } from "./types";
@@ -37,7 +38,7 @@ interface Prefs {
   haptics: boolean;
 }
 
-interface AppState {
+export interface AppState {
   hydrated: boolean;
   isAuthed: boolean;
   profile: UserProfile;
@@ -49,11 +50,13 @@ interface AppState {
   enrollment: ProgramEnrollment | null;
   prefs: Prefs;
   draftExercises: string[];
+  draftRoutine: RoutineSessionDraft | null;
   weeklyRoutines: WeeklyRoutine[];
   journalEntries: JournalEntry[];
   accountLogs: AccountLog[];
 
   // auth / onboarding
+  replaceStoredData: (data: Partial<StoredAppData>, email: string, name?: string) => void;
   login: (email: string, name?: string) => void;
   logout: () => void;
   setDosha: (scores: Record<Dosha, number>, primary: UserProfile["doshaPrimary"]) => void;
@@ -74,6 +77,7 @@ interface AppState {
 
   // workout draft
   setDraft: (ids: string[]) => void;
+  setRoutineDraft: (draft: RoutineSessionDraft) => void;
   toggleDraft: (id: string) => void;
   clearDraft: () => void;
 
@@ -97,6 +101,23 @@ interface AppState {
   seedDemo: () => void;
 }
 
+export type StoredAppData = Pick<
+  AppState,
+  | "profile"
+  | "workouts"
+  | "yoga"
+  | "breath"
+  | "body"
+  | "streaks"
+  | "enrollment"
+  | "prefs"
+  | "draftExercises"
+  | "draftRoutine"
+  | "weeklyRoutines"
+  | "journalEntries"
+  | "accountLogs"
+>;
+
 const defaultProfile: UserProfile = {
   name: "",
   email: "",
@@ -108,6 +129,40 @@ const defaultProfile: UserProfile = {
   heightUnit: "cm",
   weightUnit: "kg",
 };
+
+const baseStoredData = (): StoredAppData => ({
+  profile: { ...defaultProfile },
+  workouts: [],
+  yoga: [],
+  breath: [],
+  body: [],
+  streaks: { move: emptyStreak(), yoga: emptyStreak(), breathe: emptyStreak() },
+  enrollment: null,
+  prefs: { sound: true, haptics: true },
+  draftExercises: [],
+  draftRoutine: null,
+  weeklyRoutines: [],
+  journalEntries: [],
+  accountLogs: [],
+});
+
+export function selectStoredAppData(state: AppState): StoredAppData {
+  return {
+    profile: state.profile,
+    workouts: state.workouts,
+    yoga: state.yoga,
+    breath: state.breath,
+    body: state.body,
+    streaks: state.streaks,
+    enrollment: state.enrollment,
+    prefs: state.prefs,
+    draftExercises: state.draftExercises,
+    draftRoutine: state.draftRoutine,
+    weeklyRoutines: state.weeklyRoutines,
+    journalEntries: state.journalEntries,
+    accountLogs: state.accountLogs,
+  };
+}
 
 function logAccount(action: string, detail: string): AccountLog {
   return { id: uid(), date: todayISO(), action, detail };
@@ -160,18 +215,43 @@ export const useStore = create<AppState>()(
       enrollment: null,
       prefs: { sound: true, haptics: true },
       draftExercises: [],
+      draftRoutine: null,
       weeklyRoutines: [],
       journalEntries: [],
       accountLogs: [],
 
-      setDraft: (ids) => set({ draftExercises: ids }),
+      setDraft: (ids) => set({ draftExercises: ids, draftRoutine: null }),
+      setRoutineDraft: (draft) => set({ draftRoutine: draft, draftExercises: [] }),
       toggleDraft: (id) =>
         set((st) => ({
+          draftRoutine: null,
           draftExercises: st.draftExercises.includes(id)
             ? st.draftExercises.filter((x) => x !== id)
             : [...st.draftExercises, id],
         })),
-      clearDraft: () => set({ draftExercises: [] }),
+      clearDraft: () => set({ draftExercises: [], draftRoutine: null }),
+
+      replaceStoredData: (data, email, name) => {
+        const base = baseStoredData();
+        const nextProfile = {
+          ...base.profile,
+          ...data.profile,
+          email,
+          name: data.profile?.name || name || email.split("@")[0],
+        };
+        set({
+          ...base,
+          ...data,
+          hydrated: true,
+          isAuthed: true,
+          profile: nextProfile,
+          streaks: { ...base.streaks, ...data.streaks },
+          prefs: { ...base.prefs, ...data.prefs },
+          draftExercises: data.draftExercises ?? [],
+          draftRoutine: data.draftRoutine ?? null,
+          enrollment: data.enrollment ?? null,
+        });
+      },
 
       login: (email, name) =>
         set((st) => ({
@@ -196,6 +276,8 @@ export const useStore = create<AppState>()(
           body: [],
           streaks: { move: emptyStreak(), yoga: emptyStreak(), breathe: emptyStreak() },
           enrollment: null,
+          draftExercises: [],
+          draftRoutine: null,
           weeklyRoutines: [],
           journalEntries: [],
           accountLogs: [],
@@ -329,11 +411,11 @@ export const useStore = create<AppState>()(
         set((st) => ({ workouts: st.workouts.filter((w) => w.id !== id) })),
 
       seedDemo: () => {
-        if (get().workouts.length > 0) return; // don't double-seed
-        const workouts: WorkoutLog[] = [
+        const current = get();
+        if (current.workouts.length >= 10 && current.body.length >= 8) return;
+
+        const workoutTemplates: Omit<WorkoutLog, "id" | "date">[] = [
           {
-            id: uid(),
-            date: isoDaysAgo(1),
             name: "Upper Body Power",
             durationMin: 52,
             rpe: 8,
@@ -343,16 +425,20 @@ export const useStore = create<AppState>()(
                 exerciseId: "barbell-bench-press",
                 name: "Barbell Bench Press",
                 targetMuscles: "Chest, Shoulders, Triceps",
+                equipment: "barbell, bench",
+                usesWeight: true,
                 sets: [
                   { reps: 10, weight: 60, done: true },
                   { reps: 8, weight: 62.5, done: true },
-                  { reps: 8, weight: 62.5, done: true },
+                  { reps: 8, weight: 65, done: true },
                 ],
               },
               {
                 exerciseId: "incline-dumbbell-row",
                 name: "Incline Dumbbell Row",
                 targetMuscles: "Back, Biceps",
+                equipment: "dumbbell, bench",
+                usesWeight: true,
                 sets: [
                   { reps: 12, weight: 22, done: true },
                   { reps: 10, weight: 24, done: true },
@@ -361,9 +447,7 @@ export const useStore = create<AppState>()(
             ],
           },
           {
-            id: uid(),
-            date: isoDaysAgo(3),
-            name: "Lower Body",
+            name: "Lower Body Strength",
             durationMin: 48,
             rpe: 7,
             volume: 6100,
@@ -372,48 +456,207 @@ export const useStore = create<AppState>()(
                 exerciseId: "back-squat",
                 name: "Barbell Back Squat",
                 targetMuscles: "Quads, Glutes",
+                equipment: "barbell",
+                usesWeight: true,
                 sets: [
                   { reps: 8, weight: 80, done: true },
                   { reps: 8, weight: 82.5, done: true },
+                  { reps: 6, weight: 85, done: true },
                 ],
+              },
+              {
+                exerciseId: "walking-lunge",
+                name: "Walking Lunge",
+                targetMuscles: "Quads, Glutes",
+                equipment: "dumbbell",
+                usesWeight: true,
+                sets: [{ reps: 12, weight: 16, done: true }],
               },
             ],
           },
           {
-            id: uid(),
-            date: isoDaysAgo(5),
-            name: "Full Body",
-            durationMin: 45,
+            name: "Home Bodyweight",
+            durationMin: 36,
+            rpe: 6,
+            volume: 1800,
+            exercises: [
+              {
+                exerciseId: "push-up",
+                name: "Push Up",
+                targetMuscles: "Chest, Triceps",
+                equipment: "bodyweight",
+                usesWeight: false,
+                sets: [
+                  { reps: 18, done: true },
+                  { reps: 16, done: true },
+                  { reps: 14, done: true },
+                ],
+              },
+              {
+                exerciseId: "bodyweight-squat",
+                name: "Bodyweight Squat",
+                targetMuscles: "Quads, Glutes",
+                equipment: "bodyweight",
+                usesWeight: false,
+                sets: [{ reps: 25, done: true }],
+              },
+            ],
+          },
+          {
+            name: "Pull & Core",
+            durationMin: 44,
             rpe: 7,
             volume: 3900,
             exercises: [
               {
-                exerciseId: "deadlift",
-                name: "Conventional Deadlift",
-                targetMuscles: "Hamstrings, Glutes, Back",
-                sets: [{ reps: 5, weight: 100, done: true }],
+                exerciseId: "pull-up",
+                name: "Pull Up",
+                targetMuscles: "Back, Biceps",
+                equipment: "pull up bar",
+                usesWeight: false,
+                sets: [
+                  { reps: 8, done: true },
+                  { reps: 7, done: true },
+                  { reps: 6, done: true },
+                ],
+              },
+              {
+                exerciseId: "kettlebell-swing",
+                name: "Kettlebell Swing",
+                targetMuscles: "Glutes, Hamstrings",
+                equipment: "kettlebell",
+                usesWeight: true,
+                sets: [
+                  { reps: 15, weight: 20, done: true },
+                  { reps: 15, weight: 20, done: true },
+                ],
               },
             ],
           },
         ];
+        const workoutDays = [1, 3, 5, 8, 10, 12, 15, 17, 20, 22, 24, 27];
+        const workouts: WorkoutLog[] = workoutDays.map((daysAgo, index) => ({
+          ...workoutTemplates[index % workoutTemplates.length],
+          id: uid(),
+          date: isoDaysAgo(daysAgo),
+          volume: workoutTemplates[index % workoutTemplates.length].volume + index * 145,
+        }));
         const yoga: YogaSession[] = [
           { id: uid(), date: isoDaysAgo(1), flowId: "morning-energizer", flowName: "Morning Energizer", type: "flow", durationMin: 15, posesCount: 8 },
           { id: uid(), date: isoDaysAgo(2), flowName: "Surya Namaskar", type: "surya_namaskar", durationMin: 12, posesCount: 12, suryaRounds: 12 },
           { id: uid(), date: isoDaysAgo(4), flowId: "vata-grounding", flowName: "Vata Grounding", type: "flow", durationMin: 30, posesCount: 11 },
+          { id: uid(), date: isoDaysAgo(6), flowName: "Hip Mobility Reset", type: "poses", durationMin: 18, posesCount: 6 },
+          { id: uid(), date: isoDaysAgo(9), flowName: "Evening Release", type: "flow", durationMin: 22, posesCount: 9 },
+          { id: uid(), date: isoDaysAgo(13), flowName: "Balance Practice", type: "poses", durationMin: 16, posesCount: 5 },
+          { id: uid(), date: isoDaysAgo(16), flowName: "Backbend Basics", type: "poses", durationMin: 20, posesCount: 7 },
+          { id: uid(), date: isoDaysAgo(19), flowName: "Travel Stretch", type: "flow", durationMin: 14, posesCount: 6 },
+          { id: uid(), date: isoDaysAgo(23), flowName: "Deep Rest", type: "flow", durationMin: 25, posesCount: 8 },
         ];
-        const body: BodyMetric[] = [
-          { id: uid(), date: isoDaysAgo(7), weight: 74.2 },
-          { id: uid(), date: isoDaysAgo(3), weight: 73.8 },
-          { id: uid(), date: isoDaysAgo(0), weight: 73.6 },
+        const breath: BreathSession[] = [
+          { id: uid(), date: isoDaysAgo(1), techniqueId: "box-breathing", techniqueName: "Box Breathing", durationSec: 300, preMood: 5, postMood: 8, completed: true },
+          { id: uid(), date: isoDaysAgo(2), techniqueId: "nadi-shodhana", techniqueName: "Nadi Shodhana", durationSec: 420, preMood: 6, postMood: 8, completed: true },
+          { id: uid(), date: isoDaysAgo(4), techniqueId: "bhramari", techniqueName: "Bhramari", durationSec: 240, preMood: 4, postMood: 7, completed: true },
+          { id: uid(), date: isoDaysAgo(7), techniqueId: "ujjayi", techniqueName: "Ujjayi Breath", durationSec: 360, preMood: 6, postMood: 8, completed: true },
+          { id: uid(), date: isoDaysAgo(11), techniqueId: "box-breathing", techniqueName: "Box Breathing", durationSec: 300, preMood: 5, postMood: 7, completed: true },
+          { id: uid(), date: isoDaysAgo(14), techniqueId: "nadi-shodhana", techniqueName: "Nadi Shodhana", durationSec: 480, preMood: 5, postMood: 8, completed: true },
+          { id: uid(), date: isoDaysAgo(18), techniqueId: "sheetali", techniqueName: "Sheetali", durationSec: 300, preMood: 6, postMood: 8, completed: true },
+          { id: uid(), date: isoDaysAgo(25), techniqueId: "bhramari", techniqueName: "Bhramari", durationSec: 300, preMood: 4, postMood: 7, completed: true },
+        ];
+        const body: BodyMetric[] = Array.from({ length: 12 }, (_, index) => {
+          const daysAgo = 33 - index * 3;
+          return {
+            id: uid(),
+            date: isoDaysAgo(Math.max(daysAgo, 0)),
+            weight: Number((75.1 - index * 0.18).toFixed(1)),
+            waist: Number((86.4 - index * 0.22).toFixed(1)),
+            chest: Number((101.5 + index * 0.08).toFixed(1)),
+          };
+        }).reverse();
+        const weeklyRoutines: WeeklyRoutine[] = [
+          {
+            id: uid(),
+            name: "Professor Demo Strength",
+            module: "train",
+            favorite: true,
+            createdAt: isoDaysAgo(28),
+            updatedAt: isoDaysAgo(1),
+            days: [
+              { day: 0, enabled: true, timeOfDay: "morning", focus: "Upper body", items: [
+                { id: uid(), type: "exercise", refId: "barbell-bench-press", name: "Barbell Bench Press", equipment: "barbell", usesWeight: true, restTimer: 75, sets: [{ id: uid(), reps: 10, weight: 60 }, { id: uid(), reps: 8, weight: 65 }] },
+                { id: uid(), type: "exercise", refId: "incline-dumbbell-row", name: "Incline Dumbbell Row", equipment: "dumbbell", usesWeight: true, restTimer: 60, sets: [{ id: uid(), reps: 12, weight: 24 }] },
+              ] },
+              { day: 2, enabled: true, timeOfDay: "evening", focus: "Lower body", items: [
+                { id: uid(), type: "exercise", refId: "back-squat", name: "Barbell Back Squat", equipment: "barbell", usesWeight: true, restTimer: 90, sets: [{ id: uid(), reps: 8, weight: 82.5 }, { id: uid(), reps: 6, weight: 85 }] },
+              ] },
+              { day: 4, enabled: true, timeOfDay: "any", focus: "Home circuit", items: [
+                { id: uid(), type: "exercise", refId: "push-up", name: "Push Up", equipment: "bodyweight", usesWeight: false, restTimer: 45, sets: [{ id: uid(), reps: 18 }, { id: uid(), reps: 14 }] },
+              ] },
+              { day: 1, enabled: false, timeOfDay: "any", items: [] },
+              { day: 3, enabled: false, timeOfDay: "any", items: [] },
+              { day: 5, enabled: false, timeOfDay: "any", items: [] },
+              { day: 6, enabled: false, timeOfDay: "any", items: [] },
+            ],
+          },
+          {
+            id: uid(),
+            name: "Yoga + Breath Reset",
+            module: "combined",
+            favorite: true,
+            createdAt: isoDaysAgo(20),
+            updatedAt: isoDaysAgo(2),
+            days: [
+              { day: 1, enabled: true, timeOfDay: "morning", focus: "Mobility", items: [
+                { id: uid(), type: "asana", refId: "tree", name: "Tree Pose", restTimer: 20, sets: [{ id: uid(), duration: 45 }] },
+                { id: uid(), type: "pranayama", refId: "nadi-shodhana", name: "Nadi Shodhana", restTimer: 0, sets: [{ id: uid(), duration: 300 }] },
+              ] },
+              { day: 3, enabled: true, timeOfDay: "evening", focus: "Recovery", items: [
+                { id: uid(), type: "asana", refId: "childs-pose", name: "Child's Pose", restTimer: 15, sets: [{ id: uid(), duration: 60 }] },
+                { id: uid(), type: "pranayama", refId: "bhramari", name: "Bhramari", restTimer: 0, sets: [{ id: uid(), duration: 240 }] },
+              ] },
+              { day: 0, enabled: false, timeOfDay: "any", items: [] },
+              { day: 2, enabled: false, timeOfDay: "any", items: [] },
+              { day: 4, enabled: false, timeOfDay: "any", items: [] },
+              { day: 5, enabled: false, timeOfDay: "any", items: [] },
+              { day: 6, enabled: false, timeOfDay: "any", items: [] },
+            ],
+          },
+        ];
+        const journalEntries: JournalEntry[] = [
+          { id: uid(), date: isoDaysAgo(1), module: "train", title: "Bench felt stronger", durationMin: 52, exerciseNames: ["Barbell Bench Press", "Incline Dumbbell Row"], volume: 4820, rpe: 8, notes: "Good energy and clean reps." },
+          { id: uid(), date: isoDaysAgo(4), module: "yoga", title: "Grounding practice", durationMin: 30, posesCount: 11, notes: "Calmer after the evening flow." },
+          { id: uid(), date: isoDaysAgo(9), module: "yoga", title: "Better hip mobility", durationMin: 22, posesCount: 9, notes: "Left side still tighter." },
         ];
         set({
+          profile: {
+            ...current.profile,
+            name: current.profile.name || "Professor Demo",
+            email: current.profile.email || "admin@admin.com",
+            onboarded: true,
+            age: current.profile.age ?? 29,
+            gender: current.profile.gender ?? "male",
+            heightCm: current.profile.heightCm ?? 176,
+            weightKg: current.profile.weightKg ?? 73.6,
+            goals: current.profile.goals.length
+              ? current.profile.goals
+              : ["strength", "flexible", "stress", "consistency"],
+            doshaPrimary: current.profile.doshaPrimary ?? "tridoshic",
+            doshaScores: current.profile.doshaScores ?? { vata: 34, pitta: 33, kapha: 33 },
+          },
           workouts,
           yoga,
+          breath,
           body,
+          weeklyRoutines,
+          journalEntries,
+          accountLogs: [
+            logAccount("Demo data loaded", "Professor account was prepared with sample activity"),
+            logAccount("Signed in", `Signed in as ${current.profile.email || "admin@admin.com"}`),
+            ...current.accountLogs,
+          ],
           streaks: {
-            move: { current: 3, longest: 6, lastDate: dayKey(isoDaysAgo(1)) },
-            yoga: { current: 2, longest: 9, lastDate: dayKey(isoDaysAgo(1)) },
-            breathe: { current: 0, longest: 0, lastDate: null },
+            move: { current: 2, longest: 8, lastDate: dayKey(isoDaysAgo(1)) },
+            yoga: { current: 4, longest: 10, lastDate: dayKey(isoDaysAgo(1)) },
+            breathe: { current: 2, longest: 7, lastDate: dayKey(isoDaysAgo(1)) },
           },
         });
       },

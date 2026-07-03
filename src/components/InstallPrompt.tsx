@@ -59,14 +59,14 @@ export function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Install Tapas"
+      aria-label="Install TAPAS"
       style={{
         position: "fixed",
         left: "50%",
         transform: "translateX(-50%)",
-        bottom: "calc(90px + env(safe-area-inset-bottom))",
+        top: "calc(12px + env(safe-area-inset-top))",
         width: "min(460px, calc(100% - 24px))",
-        maxHeight: "calc(100dvh - 120px)",
+        maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top))",
         zIndex: 200,
         animation: "fadeUp 0.45s ease both",
       }}
@@ -95,13 +95,13 @@ export function InstallPrompt() {
           <Logo size={30} />
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 600, fontSize: 15 }}>Install Tapas</div>
+          <div style={{ fontWeight: 600, fontSize: 15 }}>Install TAPAS</div>
           <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
             {iosHint
               ? "On iPhone, tap Share, then Add to Home Screen."
               : deferred
-                ? "Add to your home screen for the full app."
-                : "Use your browser menu or address-bar install icon to add Tapas."}
+                ? "Add TAPAS to your home screen for the full app."
+                : "Use your browser menu or install icon to add TAPAS."}
           </div>
         </div>
         {!iosHint && deferred && (

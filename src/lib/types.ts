@@ -1,4 +1,4 @@
-// Core domain types for Tapas (health practice tracker)
+// Core domain types for TAPAS (health practice tracker)
 
 export type Dosha = "vata" | "pitta" | "kapha";
 export type DoshaEffect = "increase" | "decrease" | "balance";
@@ -110,7 +110,7 @@ export interface Program {
 // ---- User-logged records ----
 export interface LoggedSet {
   reps: number;
-  weight: number;
+  weight?: number;
   done: boolean;
 }
 
@@ -118,6 +118,8 @@ export interface LoggedExercise {
   exerciseId: string;
   name: string;
   targetMuscles: string;
+  equipment?: string;
+  usesWeight?: boolean;
   sets: LoggedSet[];
 }
 
@@ -199,6 +201,9 @@ export interface RoutineItem {
   type: "exercise" | "asana" | "pranayama";
   refId: string;
   name: string;
+  image?: string;
+  equipment?: string;
+  usesWeight?: boolean;
   sets: RoutineSet[];
   restTimer: number; // in seconds, 0 means OFF
 }
@@ -216,8 +221,18 @@ export interface WeeklyRoutine {
   name: string;
   module: "yoga" | "train" | "combined";
   days: DayRoutine[];
+  favorite?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RoutineSessionDraft {
+  routineId: string;
+  routineName: string;
+  day: DayOfWeek;
+  dayLabel: string;
+  items: RoutineItem[];
+  startedAt: string;
 }
 
 export interface AccountLog {

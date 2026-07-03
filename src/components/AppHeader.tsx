@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { IconInstall } from "./Icons";
 import { Logo } from "./Logo";
-import { requestInstallPrompt } from "@/lib/install";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function AppHeader({
   title,
@@ -50,11 +49,7 @@ export function AppHeader({
           )}
         </div>
       </div>
-      {right ?? (
-        <button className="icon-btn" onClick={requestInstallPrompt} aria-label="Install app" title="Install app">
-          <IconInstall width={22} height={22} />
-        </button>
-      )}
+      {right ?? <ThemeToggle />}
     </header>
   );
 }

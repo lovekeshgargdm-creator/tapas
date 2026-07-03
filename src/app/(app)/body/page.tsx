@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AppHeader } from "@/components/AppHeader";
+import { BackHeader } from "@/components/BackHeader";
 import { Sparkline } from "@/components/Sparkline";
 import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { useStore, uid, todayISO } from "@/lib/store";
@@ -20,6 +20,7 @@ export default function BodyPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWeight, setEditWeight] = useState("");
   const [saved, setSaved] = useState(false);
+  const [filter, setFilter] = useState<"all" | "week" | "month">("all");
 
   const weightEntries = mounted
     ? [...body].filter((entry) => entry.weight).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -28,6 +29,18 @@ export default function BodyPage() {
   const firstWeight = weightSeries[0];
   const latestWeight = weightSeries[weightSeries.length - 1];
   const change = firstWeight && latestWeight ? latestWeight - firstWeight : 0;
+  const filteredWeightEntries = weightEntries.filter((entry) => {
+    if (filter === "all") return true;
+    const entryTime = new Date(entry.date).getTime();
+    const now = Date.now();
+    const days = filter === "week" ? 7 : 30;
+    return now - entryTime <= days * 86400000;
+  });
+
+  const weightError = (reason: "max" | "negative") =>
+    reason === "negative"
+      ? "Weight cannot be negative."
+      : `Weight cannot be more than ${LIMITS.weightKg} kg.`;
 
   const saveWeight = () => {
     const parsed = parseFloat(weight);
@@ -64,7 +77,7 @@ export default function BodyPage() {
 
   return (
     <div className="page" style={{ paddingBottom: 100 }}>
-      <AppHeader title="Log Weight" subtitle="Weight progress" accent="#8fd4ff" />
+      <BackHeader title="Log Weight" subtitle="Weight progress" fallback="/home" />
 
       <section className="card" style={{ marginBottom: 20 }}>
         <div className="row between" style={{ gap: 14, alignItems: "flex-start" }}>
@@ -80,7 +93,7 @@ export default function BodyPage() {
               </p>
             )}
           </div>
-          {weightSeries.length > 1 && <Sparkline data={weightSeries} color="#8fd4ff" width={140} height={54} />}
+          {weightSeries.length > 1 && <Sparkline data={weightSeries} color="var(--color-breathe)" width={140} height={54} />}
         </div>
       </section>
 
@@ -99,7 +112,7 @@ export default function BodyPage() {
               setInputError("");
               setWeight(clampNumericInput(event.target.value, LIMITS.weightKg, {
                 decimal: true,
-                onLimit: () => setInputError(`Weight cannot be more than ${LIMITS.weightKg} kg. Negative values are not allowed.`),
+                onLimit: (reason) => setInputError(weightError(reason)),
               }));
             }}
           />
@@ -108,17 +121,35 @@ export default function BodyPage() {
           </button>
         </div>
         {inputError && (
-          <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(239,140,140,0.36)", background: "rgba(239,140,140,0.1)", color: "#efb0b0", fontSize: 13, fontWeight: 600 }}>
+          <div style={{ marginTop: 10, padding: "10px 12px", borderRadius: 10, border: "1px solid var(--color-error-soft-border)", background: "var(--color-error-soft-bg)", color: "var(--color-error-soft)", fontSize: 13, fontWeight: 600 }}>
             {inputError}
           </div>
         )}
       </section>
 
       <section className="card">
-        <h2 className="section-title" style={{ fontSize: 16, marginBottom: 12 }}>History</h2>
-        {weightEntries.length > 0 ? (
+        <div className="row between" style={{ marginBottom: 12, gap: 12 }}>
+          <h2 className="section-title" style={{ fontSize: 16 }}>History</h2>
+          <div className="row gap-xs" style={{ flexShrink: 0 }}>
+            {[
+              ["all", "All"],
+              ["week", "This Week"],
+              ["month", "This Month"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                className={`chip ${filter === id ? "active" : ""}`}
+                onClick={() => setFilter(id as "all" | "week" | "month")}
+                style={{ minHeight: 30, padding: "5px 9px", fontSize: 11 }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        {filteredWeightEntries.length > 0 ? (
           <div style={{ borderTop: "1px solid var(--color-outline-muted)" }}>
-            {[...weightEntries].reverse().map((entry) => (
+            {[...filteredWeightEntries].reverse().map((entry) => (
               <div key={entry.id} style={{ padding: "13px 0", borderBottom: "1px solid var(--color-outline-muted)" }}>
                 <div className="row between" style={{ gap: 12 }}>
                   <span className="text-caption">{new Date(entry.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</span>
@@ -135,7 +166,7 @@ export default function BodyPage() {
                           setEditError("");
                           setEditWeight(clampNumericInput(event.target.value, LIMITS.weightKg, {
                             decimal: true,
-                            onLimit: () => setEditError(`Weight cannot be more than ${LIMITS.weightKg} kg. Negative values are not allowed.`),
+                            onLimit: (reason) => setEditError(weightError(reason)),
                           }));
                         }}
                         style={{ width: 90, minHeight: 36, padding: "7px 9px", textAlign: "right" }}
@@ -160,7 +191,7 @@ export default function BodyPage() {
                   )}
                 </div>
                 {editingId === entry.id && editError && (
-                  <div style={{ marginTop: 8, padding: "9px 11px", borderRadius: 10, border: "1px solid rgba(239,140,140,0.36)", background: "rgba(239,140,140,0.1)", color: "#efb0b0", fontSize: 12.5, fontWeight: 600 }}>
+                  <div style={{ marginTop: 8, padding: "9px 11px", borderRadius: 10, border: "1px solid var(--color-error-soft-border)", background: "var(--color-error-soft-bg)", color: "var(--color-error-soft)", fontSize: 12.5, fontWeight: 600 }}>
                     {editError}
                   </div>
                 )}
@@ -168,7 +199,7 @@ export default function BodyPage() {
             ))}
           </div>
         ) : (
-          <p className="text-caption">No weight logs yet.</p>
+          <p className="text-caption">No weight logs for this filter.</p>
         )}
       </section>
     </div>
