@@ -19,9 +19,14 @@ export function InstallPrompt() {
     if (typeof window === "undefined") return;
     if (isStandaloneApp()) return;
 
+    if ((window as any).tapasDeferredPrompt) {
+      setDeferred((window as any).tapasDeferredPrompt as BIPEvent);
+    }
+
     const onBIP = (e: Event) => {
       e.preventDefault();
       setDeferred(e as BIPEvent);
+      (window as any).tapasDeferredPrompt = e;
     };
     window.addEventListener("beforeinstallprompt", onBIP);
     const onRequest = () => {
@@ -69,12 +74,15 @@ export function InstallPrompt() {
         maxHeight: "calc(100dvh - 24px - env(safe-area-inset-top))",
         zIndex: 200,
         animation: "fadeUp 0.45s ease both",
+        background: "#0e150f",
+        border: "1px solid rgba(115,253,156,0.15)",
+        borderRadius: 16,
+        color: "#e3e2e7",
+        boxShadow: "0 12px 40px rgba(0,0,0,0.3)",
       }}
-      className="glass"
     >
       <div
         style={{
-          borderRadius: 16,
           padding: 14,
           display: "flex",
           alignItems: "center",
@@ -86,7 +94,7 @@ export function InstallPrompt() {
             width: 44,
             height: 44,
             borderRadius: 12,
-            background: "rgba(115,253,156,0.1)",
+            background: "rgba(115,253,156,0.05)",
             display: "grid",
             placeItems: "center",
             flexShrink: 0,
@@ -96,9 +104,9 @@ export function InstallPrompt() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 600, fontSize: 15 }}>Install TAPAS</div>
-          <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+          <div style={{ fontSize: 13, color: "#bccabb" }}>
             {iosHint
-              ? "On iPhone, tap Share, then Add to Home Screen."
+              ? "On iPhone, tap Share (or View more), then Add to Home Screen."
               : deferred
                 ? "Add TAPAS to your home screen for the full app."
                 : "Use your browser menu or install icon to add TAPAS."}
@@ -118,7 +126,7 @@ export function InstallPrompt() {
           className="icon-btn"
           aria-label="Dismiss"
           onClick={dismiss}
-          style={{ width: 36, height: 36, flexShrink: 0 }}
+          style={{ width: 36, height: 36, flexShrink: 0, color: "#bccabb" }}
         >
           <IconClose width={18} height={18} />
         </button>

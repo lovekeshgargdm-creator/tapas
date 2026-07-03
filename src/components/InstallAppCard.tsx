@@ -29,9 +29,16 @@ export function InstallAppCard({ compact = false, placement = "default" }: { com
       return;
     }
 
+    if (typeof window !== "undefined" && (window as any).tapasDeferredPrompt) {
+      setDeferred((window as any).tapasDeferredPrompt as BIPEvent);
+    }
+
     const onBIP = (event: Event) => {
       event.preventDefault();
       setDeferred(event as BIPEvent);
+      if (typeof window !== "undefined") {
+        (window as any).tapasDeferredPrompt = event;
+      }
     };
     window.addEventListener("beforeinstallprompt", onBIP);
 
@@ -69,8 +76,8 @@ export function InstallAppCard({ compact = false, placement = "default" }: { com
         gap: compact ? 10 : 12,
         padding: compact ? "12px 14px" : "14px 16px",
         borderRadius: 8,
-        border: "1px solid rgba(115,253,156,0.22)",
-        background: "rgba(18,49,31,0.7)",
+        border: "1px solid var(--color-outline-muted)",
+        background: "var(--color-surface-2)",
       }}
     >
       <div
@@ -88,14 +95,15 @@ export function InstallAppCard({ compact = false, placement = "default" }: { com
         <div style={{ fontWeight: 800, fontSize: compact ? 14 : 15 }}>Install Tapas</div>
         <p className="text-caption" style={{ lineHeight: 1.25 }}>
           {iosHint
-            ? "On iPhone, tap Share, then Add to Home Screen."
+            ? "On iPhone, tap Share (or View more), then Add to Home Screen."
             : deferred && !manualHint
               ? "Open faster from your home screen."
               : "Use your browser menu or install icon."}
         </p>
       </div>
-      <button className="btn btn-primary" style={{ minHeight: 38, padding: "8px 14px", flexShrink: 0 }} onClick={install}>
-        <IconInstall width={15} height={15} /> {iosHint ? "Steps" : "Install"}
+      <button className="btn btn-primary" style={{ minHeight: 38, padding: "8px 14px", flexShrink: 0, display: "flex", alignItems: "center", gap: 6 }} onClick={install}>
+        {!iosHint && <IconInstall width={15} height={15} />}
+        <span>{iosHint ? "Steps" : "Install"}</span>
       </button>
       <button className="icon-btn" aria-label="Dismiss install prompt" onClick={dismiss} style={{ width: 32, height: 32, flexShrink: 0 }}>
         <IconClose width={16} height={16} />

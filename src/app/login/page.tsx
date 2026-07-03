@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Logo, Wordmark } from "@/components/Logo";
 import { Ambient } from "@/components/Ambient";
 import { InstallAppCard } from "@/components/InstallAppCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useStore } from "@/lib/store";
 import { IconGoogle, IconArrowRight } from "@/components/Icons";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
@@ -95,10 +96,13 @@ export default function LoginPage() {
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        background: "radial-gradient(130% 90% at 50% 0%, #12311f 0%, #0e150f 55%)",
+        background: "var(--color-surface-main)",
       }}
     >
       <Ambient />
+      <div style={{ position: "absolute", top: "calc(16px + env(safe-area-inset-top))", right: 16, zIndex: 100 }}>
+        <ThemeToggle />
+      </div>
       <div
         style={{
           position: "relative",

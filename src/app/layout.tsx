@@ -70,7 +70,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('tapas-theme')||((matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme='dark'}",
+              "try{var t=localStorage.getItem('tapas-theme')||((matchMedia('(prefers-color-scheme: light)').matches)?'light':'dark');document.documentElement.dataset.theme=t;document.documentElement.style.colorScheme=t}catch(e){document.documentElement.dataset.theme='dark'}; window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.tapasDeferredPrompt = e; });",
           }}
         />
         <SupabaseBridge />

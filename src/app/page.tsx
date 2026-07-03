@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Logo, Wordmark } from "@/components/Logo";
 import { Ambient } from "@/components/Ambient";
 import { InstallAppCard } from "@/components/InstallAppCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
 
@@ -31,11 +32,13 @@ export default function Splash() {
         placeItems: "center",
         position: "relative",
         overflow: "hidden",
-        background:
-          "radial-gradient(130% 100% at 50% 20%, #12311f 0%, #0e150f 60%)",
+        background: "var(--color-surface-main)",
       }}
     >
       <Ambient />
+      <div style={{ position: "absolute", top: "calc(16px + env(safe-area-inset-top))", right: 16, zIndex: 100 }}>
+        <ThemeToggle />
+      </div>
       <motion.div
         initial={{ opacity: 1 }}
         animate={{ opacity: leaving ? 0 : 1 }}
