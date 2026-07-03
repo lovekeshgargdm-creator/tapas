@@ -7,7 +7,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { InstallAppCard } from "@/components/InstallAppCard";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
-import { IconArrowRight, IconPatterns, IconBody, IconChartBar } from "@/components/Icons";
+import { IconArrowRight, IconTrend, IconJournal, IconBody, IconProgram } from "@/components/Icons";
 
 const TRAIN_COLOR = "var(--color-train)";
 const YOGA_COLOR = "var(--color-yoga)";
@@ -130,7 +130,7 @@ export default function HomePage() {
           {days.map((date, i) => {
             const dateString = localDayKey(date);
             const isActive = activeTrainDates.has(dateString) || activeYogaDates.has(dateString) || activeBreathDates.has(dateString);
-            const isToday = i === 13;
+            const isToday = i === rangeDays - 1;
             const tooltip = `${date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}: ${
               isActive ? "activity logged" : "no activity logged"
             }`;
@@ -318,11 +318,12 @@ export default function HomePage() {
       </div>
 
       {/* Quick actions */}
-      <h3 className="section-title" style={{ fontSize: 16, marginBottom: 12 }}>Continue Your Practice</h3>
-      <div className="stack gap-sm">
-        <QuickAction href="/report" title="Detailed Report" desc="Monthly activity, progress, and weight insights" Icon={IconChartBar} color="#2ee5b5" />
-        <QuickAction href="/library" title="Library" desc="Explore exercises, poses, and pranayam" Icon={IconPatterns} color="#73fd9c" />
-        <QuickAction href="/body" title="Log Weight" desc="Track weight and progress" Icon={IconBody} color="var(--color-breathe)" />
+      <h3 className="section-title" style={{ fontSize: 16, marginBottom: 12 }}>Tools & Insights</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <QuickAction href="/report" title="Detailed Report" desc="Monthly activity and progress" Icon={IconTrend} color="var(--color-seafoam-calm)" />
+        <QuickAction href="/library" title="Library" desc="Explore exercises and poses" Icon={IconProgram} color="var(--color-mint-active)" />
+        <QuickAction href="/logs" title="Exercise Logs" desc="View your completed routines" Icon={IconJournal} color="var(--color-train)" />
+        <QuickAction href="/body" title="Weight Logs" desc="Track weight and progress" Icon={IconBody} color="var(--color-breathe)" />
       </div>
       <div style={{ height: 100 }} />
     </div>
@@ -401,15 +402,16 @@ function QuickAction({ href, title, desc, Icon, color }: {
   href: string; title: string; desc: string; Icon: React.FC<{ width?: number; height?: number }>; color: string;
 }) {
   return (
-    <Link href={href} className="card card-interactive" style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px" }}>
-      <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-sage-gray)", display: "grid", placeItems: "center", color, flexShrink: 0 }}>
-        <Icon width={24} height={24} />
+    <Link href={href} className="card card-interactive stack" style={{ padding: "18px 16px", minWidth: 0, justifyContent: "flex-start", gap: 8 }}>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "grid", placeItems: "center", color, flexShrink: 0, marginBottom: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
+        <Icon width={22} height={22} />
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 600, fontSize: 17 }}>{title}</div>
-        <div className="text-caption">{desc}</div>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 16, letterSpacing: "-0.2px" }}>{title}</div>
+        <div className="text-caption" style={{ fontSize: 12, lineHeight: 1.4, marginTop: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+          {desc}
+        </div>
       </div>
-      <IconArrowRight width={18} height={18} style={{ color: "var(--color-text-muted)" }} />
     </Link>
   );
 }

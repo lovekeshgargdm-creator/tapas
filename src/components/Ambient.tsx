@@ -10,9 +10,9 @@ export function Ambient({ dim = false }: { dim?: boolean }) {
       <div
         style={{
           position: "absolute",
-          inset: 0,
+          top: 0, left: 0, right: 0, height: "70vh",
           background:
-            `radial-gradient(75% 42% at 50% 0%, ${dim ? "var(--ambient-top-dim)" : "var(--ambient-top)"} 0%, var(--ambient-clear) 72%)`,
+            `radial-gradient(circle at 50% 0%, ${dim ? "var(--ambient-top-dim)" : "var(--ambient-top)"} 0%, var(--ambient-clear) 70%)`,
         }}
       />
       <div

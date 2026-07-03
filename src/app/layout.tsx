@@ -30,6 +30,12 @@ export const metadata: Metadata = {
   description:
     "One calm place to track movement, yoga, and breathwork. Understand your health routine as a system, not separate apps.",
   applicationName: "TAPAS",
+  formatDetection: {
+    telephone: false,
+    date: false,
+    email: false,
+    address: false,
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

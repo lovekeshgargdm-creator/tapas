@@ -2,21 +2,28 @@
 
 import { useRouter } from "next/navigation";
 import { IconChevronLeft } from "./Icons";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function BackHeader({
   title,
   subtitle,
   fallback = "/home",
   right,
+  onBack,
 }: {
   title: string;
   subtitle?: string;
   fallback?: string;
   right?: React.ReactNode;
+  onBack?: () => void;
 }) {
   const router = useRouter();
 
   const goBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (typeof window !== "undefined" && window.history.length > 1) router.back();
     else router.push(fallback);
   };
@@ -70,7 +77,10 @@ export function BackHeader({
           )}
         </div>
       </div>
-      {right}
+      <div className="row gap-sm" style={{ flexShrink: 0 }}>
+        {right}
+        <ThemeToggle />
+      </div>
     </header>
   );
 }

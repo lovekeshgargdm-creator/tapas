@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { fetchExerciseDetails } from "@/app/actions/exercise";
 import { fetchYogaPoseMediaMap, type YogaPoseMedia } from "@/app/actions/yoga";
 import { AppHeader } from "@/components/AppHeader";
+import { BackHeader } from "@/components/BackHeader";
 import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { ASANAS, ROUTINE_PRESETS, TECHNIQUES, type PresetItem, type RoutinePreset } from "@/lib/seed";
 import { useStore, uid, todayISO } from "@/lib/store";
@@ -324,7 +325,15 @@ export default function TrainPage() {
 
   return (
     <div className="page">
-      <AppHeader title="Routine" subtitle="Build training and yoga together" accent="#73fd9c" />
+      {!buildingRoutine ? (
+        <AppHeader title="Routine" subtitle="Build training and yoga together" accent="#73fd9c" />
+      ) : (
+        <BackHeader 
+          title={editingRoutineId ? "Edit Routine" : "Create Routine"} 
+          subtitle="Manage your training plan" 
+          onBack={resetBuilder} 
+        />
+      )}
 
         <div>
           {!buildingRoutine ? (
@@ -711,44 +720,82 @@ function TrainRoutineCard({
   const enabledDays = routine.days.filter((d) => d.enabled);
   const itemCount = enabledDays.reduce((sum, day) => sum + day.items.length, 0);
   const hasItems = itemCount > 0;
+  
   return (
-    <div className="card">
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <div style={{ fontWeight: 700, fontSize: 16 }}>{routine.name}</div>
-            {routine.favorite && <span className="pill pill-active" style={{ padding: "3px 8px", fontSize: 11 }}>Favorite</span>}
-          </div>
-          <div className="text-caption" style={{ marginTop: 2 }}>{enabledDays.length} active days · {itemCount} item{itemCount === 1 ? "" : "s"} · {routine.module === "combined" ? "Yoga + Train" : "Training"}</div>
-        </div>
-        <button className="icon-btn" onClick={onFavorite} aria-label={routine.favorite ? "Remove favorite" : "Mark favorite"} title={routine.favorite ? "Remove favorite" : "Mark favorite"} style={{ width: 34, height: 34, color: routine.favorite ? "#fdb974" : "var(--color-text-muted)" }}>
-          <IconStar width={16} height={16} fill={routine.favorite ? "currentColor" : "none"} />
-        </button>
-      </div>
-      <div style={{ display: "flex", gap: 5 }}>
-        {DAYS_LABELS.map((label, i) => {
-          const dr = routine.days.find((d) => d.day === i);
-          return (
-            <div key={i} style={{ flex: 1, textAlign: "center", padding: "6px 2px", borderRadius: 8, fontSize: 10, fontWeight: 700,
-              background: dr?.enabled ? "rgba(115,253,156,0.15)" : "var(--color-surface-main)",
-              color: dr?.enabled ? "var(--color-mint-active)" : "var(--color-text-muted)" }}>
-              {label}
+    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+      <div style={{ padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ minWidth: 0, paddingRight: 12 }}>
+            <h3 style={{ fontWeight: 800, fontSize: 17, margin: 0, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--color-text-primary)" }}>
+              {routine.name}
+            </h3>
+            <div className="text-caption">
+              {enabledDays.length} active days · {itemCount} item{itemCount === 1 ? "" : "s"} · {routine.module === "combined" ? "Yoga + Train" : "Training"}
             </div>
-          );
-        })}
+          </div>
+          <button 
+            onClick={onFavorite} 
+            aria-label={routine.favorite ? "Remove favorite" : "Mark favorite"} 
+            title={routine.favorite ? "Remove favorite" : "Mark favorite"} 
+            style={{ 
+              background: "none", border: "none", cursor: "pointer", flexShrink: 0, 
+              padding: 4, margin: "-4px -4px 0 0", 
+              color: routine.favorite ? "#fdb974" : "var(--color-text-muted)" 
+            }}
+          >
+            <IconStar width={22} height={22} fill={routine.favorite ? "currentColor" : "none"} />
+          </button>
+        </div>
+
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
+          {DAYS_LABELS.map((label, i) => {
+            const dr = routine.days.find((d) => d.day === i);
+            const active = dr?.enabled;
+            return (
+              <div 
+                key={i} 
+                style={{ 
+                  width: 30, height: 30, borderRadius: "50%", 
+                  display: "grid", placeItems: "center", fontSize: 11, fontWeight: 750,
+                  background: active ? "var(--color-mint-active)" : "var(--color-surface-main)",
+                  color: active ? "#000" : "var(--color-text-muted)",
+                  boxShadow: active ? "0 2px 8px rgba(115,253,156,0.3)" : "none"
+                }}
+              >
+                {label.charAt(0)}
+              </div>
+            );
+          })}
+        </div>
+
+        <button 
+          className="btn btn-primary btn-block" 
+          style={{ minHeight: 46, borderRadius: 12, fontSize: 15 }} 
+          onClick={onUse} 
+          disabled={!hasItems}
+        >
+          <IconPlay width={18} height={18} /> Use Routine
+        </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto auto", gap: 8, marginTop: 14 }}>
-        <button className="btn btn-primary" style={{ minHeight: 38 }} onClick={onUse} disabled={!hasItems}>
-          <IconPlay width={16} height={16} /> Use Routine
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderTop: "1px solid var(--color-outline-muted)", background: "rgba(0,0,0,0.15)" }}>
+        <button 
+          onClick={onEdit} 
+          style={{ padding: "14px 0", background: "none", border: "none", color: "var(--color-text-secondary)", fontSize: 13, fontWeight: 600, display: "flex", gap: 6, justifyContent: "center", alignItems: "center", cursor: "pointer" }}
+        >
+          <IconEdit width={15} height={15} /> Edit
         </button>
-        <button className="icon-btn" onClick={onEdit} aria-label="Edit routine" title="Edit routine" style={{ width: 38, height: 38 }}>
-          <IconEdit width={16} height={16} />
+        <button 
+          onClick={onDuplicate} 
+          style={{ padding: "14px 0", background: "none", border: "none", borderLeft: "1px solid var(--color-outline-muted)", borderRight: "1px solid var(--color-outline-muted)", color: "var(--color-text-secondary)", fontSize: 13, fontWeight: 600, display: "flex", gap: 6, justifyContent: "center", alignItems: "center", cursor: "pointer" }}
+        >
+          <IconCopy width={15} height={15} /> Duplicate
         </button>
-        <button className="icon-btn" onClick={onDuplicate} aria-label="Duplicate routine" title="Duplicate routine" style={{ width: 38, height: 38 }}>
-          <IconCopy width={16} height={16} />
-        </button>
-        <button className="icon-btn" onClick={onDelete} aria-label="Delete routine" title="Delete routine" style={{ width: 38, height: 38, color: "var(--color-status-error)" }}>
-          <IconTrash width={15} height={15} />
+        <button 
+          onClick={onDelete} 
+          style={{ padding: "14px 0", background: "none", border: "none", color: "var(--color-status-error)", fontSize: 13, fontWeight: 600, display: "flex", gap: 6, justifyContent: "center", alignItems: "center", cursor: "pointer" }}
+        >
+          <IconTrash width={15} height={15} /> Delete
         </button>
       </div>
     </div>

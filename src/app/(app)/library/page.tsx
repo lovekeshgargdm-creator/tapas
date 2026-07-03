@@ -213,11 +213,11 @@ export default function LibraryPage() {
         <div className="clay" style={{ padding: 12, marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <button className="card card-interactive" onClick={() => setShowCategoryFilter(true)} style={{ padding: "10px 12px", textAlign: "left", minWidth: 0 }}>
             <span className="uppercase-label">Category</span>
-            <span style={{ display: "block", fontWeight: 750, textTransform: "capitalize", marginTop: 3 }}>{bodyPart}</span>
+            <span style={{ display: "block", fontWeight: 750, textTransform: "capitalize", marginTop: 3, color: "var(--color-mint-active)" }}>{bodyPart}</span>
           </button>
           <button className="card card-interactive" onClick={() => setShowEquipmentFilter(true)} style={{ padding: "10px 12px", textAlign: "left", minWidth: 0 }}>
             <span className="uppercase-label">Equipment</span>
-            <span style={{ display: "block", fontWeight: 750, marginTop: 3 }}>{EQUIPMENT_LABELS[equipment]}</span>
+            <span style={{ display: "block", fontWeight: 750, marginTop: 3, color: "var(--color-mint-active)" }}>{EQUIPMENT_LABELS[equipment]}</span>
           </button>
         </div>
       )}

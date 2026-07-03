@@ -14,7 +14,7 @@ type RangeDays = 7 | 15 | 30;
 const RANGE_OPTIONS: { value: RangeDays; label: string }[] = [
   { value: 7, label: "7 Days" },
   { value: 15, label: "15 Days" },
-  { value: 30, label: "Month" },
+  { value: 30, label: "30 Days" },
 ];
 
 const localDayKey = (date: Date | string) => {
@@ -130,7 +130,6 @@ export default function ReportPage() {
       <BackHeader
         title="Detailed Report"
         fallback="/home"
-        right={<IconChartBar width={22} height={22} style={{ color: "var(--color-mint-active)" }} />}
       />
 
       <RangeFilter value={rangeDays} onChange={setRangeDays} />

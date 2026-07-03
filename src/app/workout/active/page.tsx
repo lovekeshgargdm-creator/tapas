@@ -752,7 +752,7 @@ function Sheet({ title, children, onClose }: { title: string; children: React.Re
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
         style={{ position: "fixed", inset: 0, background: "rgba(4,8,6,0.6)", zIndex: 400 }} />
       <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 300, damping: 32 }}
-        className="glass" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 0, width: "min(520px,100%)", zIndex: 401,
+        className="glass" style={{ position: "fixed", inset: "auto 0 0 0", margin: "0 auto", width: "100%", maxWidth: 520, zIndex: 401,
           borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: "10px 18px calc(24px + env(safe-area-inset-bottom))", borderBottom: "none" }}>
         <div style={{ width: 40, height: 4, borderRadius: 4, background: "var(--color-surface-3)", margin: "6px auto 14px" }} />
         <h3 className="section-title" style={{ fontSize: 18 }}>{title}</h3>

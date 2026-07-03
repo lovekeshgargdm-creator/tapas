@@ -20,7 +20,7 @@ export default function BodyPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editWeight, setEditWeight] = useState("");
   const [saved, setSaved] = useState(false);
-  const [filter, setFilter] = useState<"all" | "week" | "month">("all");
+  const [filter, setFilter] = useState<"all" | "7" | "15" | "30">("all");
 
   const weightEntries = mounted
     ? [...body].filter((entry) => entry.weight).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
@@ -33,7 +33,7 @@ export default function BodyPage() {
     if (filter === "all") return true;
     const entryTime = new Date(entry.date).getTime();
     const now = Date.now();
-    const days = filter === "week" ? 7 : 30;
+    const days = parseInt(filter, 10);
     return now - entryTime <= days * 86400000;
   });
 
@@ -133,13 +133,14 @@ export default function BodyPage() {
           <div className="row gap-xs" style={{ flexShrink: 0 }}>
             {[
               ["all", "All"],
-              ["week", "This Week"],
-              ["month", "This Month"],
+              ["7", "7 Days"],
+              ["15", "15 Days"],
+              ["30", "30 Days"],
             ].map(([id, label]) => (
               <button
                 key={id}
                 className={`chip ${filter === id ? "active" : ""}`}
-                onClick={() => setFilter(id as "all" | "week" | "month")}
+                onClick={() => setFilter(id as "all" | "7" | "15" | "30")}
                 style={{ minHeight: 30, padding: "5px 9px", fontSize: 11 }}
               >
                 {label}

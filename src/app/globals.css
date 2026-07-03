@@ -198,11 +198,14 @@ html[data-theme="light"] body {
 a {
   color: inherit;
   text-decoration: none;
+  -webkit-text-fill-color: inherit;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  color: inherit;
+  -webkit-text-fill-color: inherit;
 }
 
 input,

@@ -28,6 +28,7 @@ const TITLES: Record<string, string> = {
   support: "Help & Support",
   privacy: "Privacy Policy",
   terms: "Terms & Conditions",
+  export: "Export Data",
 };
 
 const GOALS = [
@@ -230,6 +231,25 @@ export default function ProfileSectionPage() {
     if (!g) return "-";
     if (g === "prefer_not_to_say") return "Prefer not to say";
     return g.charAt(0).toUpperCase() + g.slice(1);
+  };
+
+  const exportData = () => {
+    const data = {
+      profile: s.profile,
+      workouts: s.workouts,
+      yoga: s.yoga,
+      breath: s.breath,
+      body: s.body,
+      streaks: s.streaks,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "tapas-export.json";
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -443,8 +463,8 @@ export default function ProfileSectionPage() {
             Consistency is the secret to measurable progress. Breathe through the journey.
           </p>
           
-          <div style={{ position: "sticky", bottom: 100, zIndex: 10, padding: "10px 0" }}>
-            <button className="btn btn-primary btn-block" style={{ height: 50, background: "var(--color-mint-active)", color: "#000", fontWeight: 700, boxShadow: "0 8px 16px rgba(0,0,0,0.6)" }} onClick={saveMeasurements}>
+          <div style={{ marginTop: 20 }}>
+            <button className="btn btn-primary btn-block" onClick={saveMeasurements}>
               {saved ? "Saved" : "Save Measurements"}
             </button>
           </div>
@@ -564,10 +584,10 @@ export default function ProfileSectionPage() {
         <section className="card">
           <SectionTitle>Support</SectionTitle>
           <p className="secondary" style={{ lineHeight: 1.7 }}>
-            Need help with TAPAS or AEROLINK? Contact support and include your account email so we can help faster.
+            Have a question or need assistance with TAPAS? Reach out to our dedicated support team. Please include your account email for a faster resolution.
           </p>
           <div style={{ borderTop: "1px solid var(--color-outline-muted)", marginTop: 18 }}>
-            <MetricRow label="Email" value="support@aerolink.com" />
+            <MetricRow label="Email" value="support@tapas-app.com" />
             <MetricRow label="Phone" value="+1 (800) 555-0199" />
           </div>
         </section>
@@ -577,10 +597,10 @@ export default function ProfileSectionPage() {
         <LegalPage
           title="Your privacy is our priority."
           items={[
-            "We do not sell your personal data.",
-            "Practice, body, and routine data stay in your TAPAS app state unless you export it.",
-            "You can sign out to clear local practice data on this device.",
-            "Use export when you want a personal backup of your data.",
+            "Your data is strictly confidential. We never sell or share your personal information with third parties.",
+            "All practice routines, body measurements, and logs are stored securely within your TAPAS account.",
+            "You have full control over your data. You can clear your local device cache at any time by signing out.",
+            "Want a personal backup? You can easily export your entire health journey at any time.",
           ]}
         />
       )}
@@ -589,12 +609,29 @@ export default function ProfileSectionPage() {
         <LegalPage
           title="Terms of Service"
           items={[
-            "TAPAS provides wellness tracking and practice guidance, not medical advice.",
-            "Consult a qualified professional before starting routines if you have health concerns.",
-            "You are responsible for practicing within your current capacity.",
-            "AEROLINK may update these terms as the product evolves.",
+            "TAPAS is designed to provide wellness tracking and practice guidance. It does not constitute professional medical advice.",
+            "Please consult with a qualified healthcare professional before beginning any new training routines, especially if you have existing health concerns.",
+            "You are fully responsible for practicing mindfully and within your own physical capabilities to avoid injury.",
+            "TAPAS may update these terms occasionally as our product and services continue to evolve.",
           ]}
         />
+      )}
+
+      {section === "export" && (
+        <section className="card">
+          <SectionTitle>Export Data</SectionTitle>
+          <div className="secondary" style={{ lineHeight: 1.7, marginBottom: 20 }}>
+            <p style={{ marginBottom: 16 }}>
+              Download a complete JSON backup of your health journey, including your routines, measurements, and progress logs.
+            </p>
+            <p>
+              <strong>AI Data Analytics:</strong> Your exported file is formatted perfectly for modern AI tools. Upload this file to ChatGPT, Claude, or Gemini to get personalized insights, analyze your consistency trends, or receive custom recommendations based on your actual practice history.
+            </p>
+          </div>
+          <button className="btn btn-primary btn-block" onClick={exportData}>
+            Download Data (JSON)
+          </button>
+        </section>
       )}
 
       {!TITLES[section] && (
@@ -664,8 +701,8 @@ function MeasurementCard({
             Latest: <span style={{ marginLeft: 8 }}>{latest ? latest.toFixed(label === "Weight" ? 1 : 0) : "--"}</span>
           </p>
         </div>
-        <div style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "var(--color-text-muted)", lineHeight: 1.15 }}>
-          {unit.toUpperCase().split("").map((c, i) => <div key={i}>{c}</div>)}
+        <div className="uppercase-label" style={{ fontSize: 11 }}>
+          {unit}
         </div>
       </div>
       <input

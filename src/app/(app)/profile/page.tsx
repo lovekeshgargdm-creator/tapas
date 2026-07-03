@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BackHeader } from "@/components/BackHeader";
+import { AppHeader } from "@/components/AppHeader";
 import { InstallAppCard } from "@/components/InstallAppCard";
 import { Logo } from "@/components/Logo";
 import { useStore } from "@/lib/store";
@@ -33,24 +33,7 @@ export default function ProfilePage() {
 
   const today = new Date();
 
-  const exportData = () => {
-    const data = {
-      profile: s.profile,
-      workouts: s.workouts,
-      yoga: s.yoga,
-      breath: s.breath,
-      body: s.body,
-      streaks: s.streaks,
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "tapas-export.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+
 
   const logout = async () => {
     const supabase = getSupabaseBrowserClient();
@@ -62,17 +45,9 @@ export default function ProfilePage() {
 
   return (
     <div className="page">
-      <BackHeader
+      <AppHeader
         title="Profile"
-        fallback="/home"
-        right={
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>Today</div>
-            <div className="text-caption">
-              {today.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            </div>
-          </div>
-        }
+        subtitle="Manage your account"
       />
 
       <section
@@ -110,7 +85,7 @@ export default function ProfilePage() {
           Data & Support
         </h2>
         <div style={{ borderTop: "1px solid var(--color-outline-muted)" }}>
-          <ActionRow label="Export Data" Icon={IconInstall} onClick={exportData} />
+          <DataLink href="/profile/export" label="Export Data" Icon={IconInstall} />
           <DataLink href="/profile/support" label="Help & Support" Icon={IconFileText} />
         </div>
       </section>
