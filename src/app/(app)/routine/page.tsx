@@ -797,10 +797,15 @@ function TrainRoutineCard({
   return (
     <div className="card" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
       <div style={{ padding: 16, position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-          <h3 style={{ fontWeight: 800, fontSize: 18, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--color-text-primary)" }}>
-            {routine.name}
-          </h3>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, paddingRight: 10 }}>
+            <h3 style={{ fontWeight: 800, fontSize: 18, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--color-text-primary)" }}>
+              {routine.name}
+            </h3>
+            <span className="pill" style={{ background: "color-mix(in srgb, var(--color-text-primary) 8%, transparent)", border: "1px solid var(--color-outline-muted)", padding: "4px 8px", fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 600, flexShrink: 0 }}>
+              {enabledDays.length} {enabledDays.length === 1 ? 'day' : 'days'}
+            </span>
+          </div>
           <button 
             onClick={onFavorite} 
             aria-label={routine.favorite ? "Remove favorite" : "Mark favorite"} 
@@ -821,8 +826,8 @@ function TrainRoutineCard({
           {breathCount > 0 && <span className="pill row" style={{ color: "var(--color-breathe)", borderColor: "color-mix(in srgb, var(--color-breathe) 25%, transparent)", background: "color-mix(in srgb, var(--color-breathe) 8%, transparent)" }}><IconBreathe width={12} height={12} style={{ marginRight: 4 }} /> {breathCount} {breathCount === 1 ? 'Session' : 'Sessions'}</span>}
         </div>
 
-        <div className="row between" style={{ gap: 12, flexWrap: "wrap" }}>
-          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <div className="row between" style={{ gap: 12 }}>
+          <div className="row" style={{ gap: 8 }}>
             <div className="row" style={{ gap: 3 }}>
               {DAYS_LABELS.map((label, i) => {
                 const dr = routine.days.find((d) => d.day === i);
@@ -843,9 +848,6 @@ function TrainRoutineCard({
                 );
               })}
             </div>
-            <span className="pill" style={{ background: "color-mix(in srgb, var(--color-text-primary) 8%, transparent)", border: "1px solid var(--color-outline-muted)", padding: "4px 10px", fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 600 }}>
-              {enabledDays.length} {enabledDays.length === 1 ? 'day' : 'days'}
-            </span>
           </div>
 
           <button 
