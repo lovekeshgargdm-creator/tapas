@@ -821,9 +821,9 @@ function TrainRoutineCard({
           {breathCount > 0 && <span className="pill row" style={{ color: "var(--color-breathe)", borderColor: "color-mix(in srgb, var(--color-breathe) 25%, transparent)", background: "color-mix(in srgb, var(--color-breathe) 8%, transparent)" }}><IconBreathe width={12} height={12} style={{ marginRight: 4 }} /> {breathCount} {breathCount === 1 ? 'Session' : 'Sessions'}</span>}
         </div>
 
-        <div className="row between" style={{ gap: 12 }}>
-          <div className="row" style={{ gap: 8 }}>
-            <div className="row" style={{ gap: 4 }}>
+        <div className="row between" style={{ gap: 12, flexWrap: "wrap" }}>
+          <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+            <div className="row" style={{ gap: 3 }}>
               {DAYS_LABELS.map((label, i) => {
                 const dr = routine.days.find((d) => d.day === i);
                 const active = dr?.enabled;
@@ -831,7 +831,7 @@ function TrainRoutineCard({
                   <div 
                     key={i} 
                     style={{ 
-                      width: 24, height: 24, borderRadius: "50%", 
+                      width: 22, height: 22, borderRadius: "50%", 
                       display: "grid", placeItems: "center", fontSize: 10, fontWeight: 750,
                       background: active ? "var(--color-mint-active)" : "var(--color-surface-main)",
                       color: active ? "var(--color-surface-main)" : "var(--color-text-secondary)",
