@@ -298,8 +298,6 @@ export default function ProfileSectionPage() {
                     display: "grid",
                     placeItems: "center",
                     overflow: "hidden",
-                    border: "2px solid var(--color-mint-active)",
-                    background: "rgba(115,253,156,0.08)",
                     color: "var(--color-mint-active)",
                     fontSize: 26,
                     fontWeight: 800,
