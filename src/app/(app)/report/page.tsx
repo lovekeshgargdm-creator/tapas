@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
 import { BackHeader } from "@/components/BackHeader";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
@@ -8,7 +10,7 @@ import { IconBody, IconBreathe, IconChartBar, IconDumbbell, IconYoga } from "@/c
 
 const TRAIN_COLOR = "var(--color-train)";
 const YOGA_COLOR = "var(--color-yoga)";
-const BREATH_COLOR = "var(--color-breathe)";
+const BREATH_COLOR = "var(--color-mint-active)";
 type RangeDays = 7 | 15 | 30;
 
 const RANGE_OPTIONS: { value: RangeDays; label: string }[] = [
@@ -32,7 +34,19 @@ const formatDuration = (minutes: number) => {
 export default function ReportPage() {
   const mounted = useMounted();
   const s = useStore();
-  const [rangeDays, setRangeDays] = useState<RangeDays>(30);
+  
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const initialRange = searchParams ? (parseInt(searchParams.get("range") || "30", 10) as RangeDays) : 30;
+  const [rangeDays, setRangeDaysState] = useState<RangeDays>(initialRange);
+
+  const setRangeDays = (val: RangeDays) => {
+    setRangeDaysState(val);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("range", val.toString());
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
 
   const report = useMemo(() => {
     const today = new Date();
@@ -135,8 +149,8 @@ export default function ReportPage() {
       <RangeFilter value={rangeDays} onChange={setRangeDays} />
 
       {(!enoughHistory || report.noData) && (
-        <section className="card" style={{ marginBottom: 18, border: "1px solid var(--color-warning-soft-border)", background: "var(--color-warning-soft-bg)" }}>
-          <div style={{ fontWeight: 800, color: "var(--color-warning-soft)", marginBottom: 6 }}>
+        <section className="card" style={{ marginBottom: 18, border: "1px solid rgba(115,253,156,0.28)", background: "var(--color-surface-3)" }}>
+          <div style={{ fontWeight: 800, color: "var(--color-mint-active)", marginBottom: 6 }}>
             {report.noData ? "No data available" : "Report warming up"}
           </div>
           <p className="text-caption" style={{ lineHeight: 1.55 }}>
@@ -149,10 +163,10 @@ export default function ReportPage() {
       <section className="clay" style={{ padding: 16, marginBottom: 18 }}>
         <div className="text-caption" style={{ marginBottom: 12 }}>{rangeLabel} summary</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-          <MetricCard label="Active Days" value={`${report.activeDays.length}/${rangeDays}`} sub={`${Math.round((report.activeDays.length / rangeDays) * 100)}% consistency`} color={TRAIN_COLOR} />
-          <MetricCard label="Sessions" value={`${report.totalSessions}`} sub={`${report.rangeWorkouts.length} train · ${report.rangeYoga.length} yoga · ${report.rangeBreath.length} breath`} color={YOGA_COLOR} />
-          <MetricCard label="Practice Time" value={formatDuration(report.trainMinutes + report.yogaMinutes + report.breathMinutes)} sub={`${formatDuration(report.trainMinutes)} train · ${formatDuration(report.yogaMinutes + report.breathMinutes)} mindful`} color={BREATH_COLOR} />
-          <MetricCard label="Weight" value={report.rangeWeights.length ? `${report.rangeWeights[report.rangeWeights.length - 1].weight?.toFixed(1)} kg` : "-"} sub={report.rangeWeights.length > 1 ? `${report.weightChange > 0 ? "+" : ""}${report.weightChange.toFixed(1)} kg change` : "Need 2 logs"} color="var(--color-breathe)" />
+          <MetricCard label="Active Days" value={`${report.activeDays.length}/${rangeDays}`} sub={`${Math.round((report.activeDays.length / rangeDays) * 100)}% consistency`} color="var(--color-mint-active)" />
+          <MetricCard label="Sessions" value={`${report.totalSessions}`} sub={`${report.rangeWorkouts.length} train · ${report.rangeYoga.length} yoga · ${report.rangeBreath.length} breath`} color="var(--color-mint-active)" />
+          <MetricCard label="Practice Time" value={formatDuration(report.trainMinutes + report.yogaMinutes + report.breathMinutes)} sub={`${formatDuration(report.trainMinutes)} train · ${formatDuration(report.yogaMinutes + report.breathMinutes)} mindful`} color="var(--color-mint-active)" />
+          <MetricCard label="Weight" value={report.rangeWeights.length ? `${report.rangeWeights[report.rangeWeights.length - 1].weight?.toFixed(1)} kg` : "-"} sub={report.rangeWeights.length > 1 ? `${report.weightChange > 0 ? "+" : ""}${report.weightChange.toFixed(1)} kg change` : "Need 2 logs"} color="var(--color-mint-active)" />
         </div>
       </section>
 
@@ -208,6 +222,11 @@ export default function ReportPage() {
                 />
                 <div className="text-caption" style={{ marginTop: 10 }}>
                   Weight: {month.weights.length > 1 ? `${weightChange > 0 ? "+" : ""}${weightChange.toFixed(1)} kg` : `${month.weights.length} log${month.weights.length === 1 ? "" : "s"}`}
+                </div>
+                <div style={{ marginTop: 14 }}>
+                  <Link href={`/report/${month.key}`} className="btn btn-primary btn-block" style={{ minHeight: 40, fontSize: 14 }}>
+                    View full report
+                  </Link>
                 </div>
               </div>
             );
@@ -325,30 +344,68 @@ function groupConsecutiveDays(days: string[]) {
 }
 
 function DailyActivityChart({ days, train, yoga, breath }: { days: string[]; train: Record<string, number>; yoga: Record<string, number>; breath: Record<string, number> }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+  }, [days]);
   const max = Math.max(1, ...days.map((day) => (train[day] || 0) + (yoga[day] || 0) + (breath[day] || 0)));
   return (
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 7, minHeight: 142, overflowX: "auto", paddingBottom: 8 }}>
-      {days.map((day) => {
-        const total = (train[day] || 0) + (yoga[day] || 0) + (breath[day] || 0);
-        const height = total ? Math.max(22, (total / max) * 116) : 8;
-        return (
-          <div key={day} style={{ flex: "1 0 20px", display: "grid", gap: 5, alignContent: "end" }}>
-            <div style={{ height, borderRadius: 8, overflow: "hidden", display: "grid", alignContent: "end", background: "var(--color-surface-3)" }}>
-              <StackPart value={breath[day] || 0} total={total} color={BREATH_COLOR} />
-              <StackPart value={yoga[day] || 0} total={total} color={YOGA_COLOR} />
-              <StackPart value={train[day] || 0} total={total} color={TRAIN_COLOR} />
-            </div>
-            <div className="text-caption" style={{ textAlign: "center", fontSize: 10 }}>{new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "narrow" })}</div>
-          </div>
-        );
-      })}
+    <div ref={scrollRef} style={{ position: "relative", overflowX: "auto", paddingBottom: 2, paddingTop: 10 }}>
+      <div style={{ height: 140, position: "relative" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", height: "100%", gap: 8, minWidth: Math.max(300, days.length * 34), position: "relative", zIndex: 1 }}>
+          {days.map((day) => {
+            const isToday = day === localDayKey(new Date());
+            const total = (train[day] || 0) + (yoga[day] || 0) + (breath[day] || 0);
+            const height = total ? Math.max(22, (total / max) * 112) : 8;
+            const dateLabel = new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+            return (
+              <div key={day} style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 8 }}>
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", width: "100%", gap: 3 }}>
+                  <motion.div
+                    initial={{ height: 0 }}
+                    animate={{ height }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    title={`${dateLabel}: ${total} total sessions`}
+                    style={{
+                      width: "80%",
+                      maxWidth: 24,
+                      minWidth: 14,
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "flex-end",
+                      background: "var(--color-surface-3)",
+                    }}
+                  >
+                    {total > 0 && [
+                      { key: 'breath', value: breath[day] || 0, color: BREATH_COLOR },
+                      { key: 'yoga', value: yoga[day] || 0, color: YOGA_COLOR },
+                      { key: 'train', value: train[day] || 0, color: TRAIN_COLOR }
+                    ].map((series) => {
+                      if (!series.value) return null;
+                      return (
+                        <div 
+                          key={series.key} 
+                          style={{ 
+                            height: `${Math.max(12, (series.value / total) * 100)}%`, 
+                            background: series.color 
+                          }} 
+                        />
+                      );
+                    })}
+                  </motion.div>
+                </div>
+                <div style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: isToday ? "var(--color-mint-active)" : "var(--color-text-muted)" }}>
+                  {new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "narrow" })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
-}
-
-function StackPart({ value, total, color }: { value: number; total: number; color: string }) {
-  if (!value || !total) return null;
-  return <div style={{ height: `${Math.max(12, (value / total) * 100)}%`, background: color }} />;
 }
 
 function Legend() {
@@ -414,8 +471,8 @@ function WeightTrendChart({ entries }: { entries: { date: string; weight?: numbe
       {[0, 1, 2].map((row) => (
         <line key={row} x1={padding} x2={width - padding} y1={padding + row * ((height - padding * 2) / 2)} y2={padding + row * ((height - padding * 2) / 2)} stroke="rgba(134,148,135,0.18)" />
       ))}
-      <path d={line} fill="none" stroke="var(--color-breathe)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map(([x, y], index) => <circle key={index} cx={x} cy={y} r={index === points.length - 1 ? 4 : 3} fill="var(--color-breathe)" />)}
+      <path d={line} fill="none" stroke="var(--color-mint-active)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      {points.map(([x, y], index) => <circle key={index} cx={x} cy={y} r={index === points.length - 1 ? 4 : 3} fill="var(--color-mint-active)" />)}
     </svg>
   );
 }

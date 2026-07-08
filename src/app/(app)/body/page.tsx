@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { Sparkline } from "@/components/Sparkline";
 import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { useStore, uid, todayISO } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
 import { IconCheck, IconClose, IconEdit, IconTrash } from "@/components/Icons";
+import { Footprints } from "lucide-react";
 
 export default function BodyPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const mounted = useMounted();
   const body = useStore((s) => s.body);
   const addBody = useStore((s) => s.addBody);
@@ -22,13 +26,24 @@ export default function BodyPage() {
   const [saved, setSaved] = useState(false);
   const [filter, setFilter] = useState<"all" | "7" | "15" | "30">("all");
 
+  useEffect(() => {
+    const qFilter = searchParams.get("filter");
+    if (qFilter === "all" || qFilter === "7" || qFilter === "15" || qFilter === "30") {
+      setFilter(qFilter);
+    }
+  }, [searchParams]);
+
+  const handleSetFilter = (newFilter: "all" | "7" | "15" | "30") => {
+    setFilter(newFilter);
+    router.replace(`/body?filter=${newFilter}`, { scroll: false });
+  };
+
+
+
+
   const weightEntries = mounted
     ? [...body].filter((entry) => entry.weight).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     : [];
-  const weightSeries = weightEntries.map((entry) => entry.weight || 0);
-  const firstWeight = weightSeries[0];
-  const latestWeight = weightSeries[weightSeries.length - 1];
-  const change = firstWeight && latestWeight ? latestWeight - firstWeight : 0;
   const filteredWeightEntries = weightEntries.filter((entry) => {
     if (filter === "all") return true;
     const entryTime = new Date(entry.date).getTime();
@@ -37,10 +52,17 @@ export default function BodyPage() {
     return now - entryTime <= days * 86400000;
   });
 
-  const weightError = (reason: "max" | "negative") =>
-    reason === "negative"
-      ? "Weight cannot be negative."
-      : `Weight cannot be more than ${LIMITS.weightKg} kg.`;
+  const displaySeries = filteredWeightEntries.map((entry) => entry.weight || 0);
+  const firstEntry = filteredWeightEntries[0];
+  const latestWeight = displaySeries[displaySeries.length - 1];
+  const change = firstEntry && latestWeight ? latestWeight - firstEntry.weight! : 0;
+  const sinceText = filter === "all" ? "first log" : firstEntry ? new Date(firstEntry.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+
+  const weightError = (reason: "max" | "min" | "negative") => {
+    if (reason === "negative") return "Weight cannot be negative.";
+    if (reason === "min") return "Weight cannot be less than 1 kg.";
+    return `Weight cannot be more than ${LIMITS.weightKg} kg.`;
+  };
 
   const saveWeight = () => {
     const parsed = parseFloat(weight);
@@ -87,13 +109,13 @@ export default function BodyPage() {
               {latestWeight ? latestWeight.toFixed(1) : "-"}
               <span style={{ fontSize: 14, color: "var(--color-text-muted)" }}> kg</span>
             </div>
-            {weightSeries.length > 1 && (
+            {displaySeries.length > 1 && (
               <p className="text-caption" style={{ marginTop: 6 }}>
-                {change === 0 ? "No net change" : `${change > 0 ? "+" : ""}${change.toFixed(1)} kg`} since first log
+                {change === 0 ? "No net change" : `${change > 0 ? "+" : ""}${change.toFixed(1)} kg`} since {sinceText}
               </p>
             )}
           </div>
-          {weightSeries.length > 1 && <Sparkline data={weightSeries} color="var(--color-breathe)" width={140} height={54} />}
+          {displaySeries.length > 1 && <Sparkline data={displaySeries} color="var(--color-seafoam-calm)" width={140} height={54} />}
         </div>
       </section>
 
@@ -111,7 +133,7 @@ export default function BodyPage() {
             onChange={(event) => {
               setInputError("");
               setWeight(clampNumericInput(event.target.value, LIMITS.weightKg, {
-                decimal: true,
+                decimal: true, min: 1,
                 onLimit: (reason) => setInputError(weightError(reason)),
               }));
             }}
@@ -140,7 +162,7 @@ export default function BodyPage() {
               <button
                 key={id}
                 className={`chip ${filter === id ? "active" : ""}`}
-                onClick={() => setFilter(id as "all" | "7" | "15" | "30")}
+                onClick={() => handleSetFilter(id as "all" | "7" | "15" | "30")}
                 style={{ minHeight: 30, padding: "5px 9px", fontSize: 11 }}
               >
                 {label}
@@ -166,7 +188,7 @@ export default function BodyPage() {
                         onChange={(event) => {
                           setEditError("");
                           setEditWeight(clampNumericInput(event.target.value, LIMITS.weightKg, {
-                            decimal: true,
+                            decimal: true, min: 1,
                             onLimit: (reason) => setEditError(weightError(reason)),
                           }));
                         }}
@@ -200,7 +222,12 @@ export default function BodyPage() {
             ))}
           </div>
         ) : (
-          <p className="text-caption">No weight logs for this filter.</p>
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-surface-3)", display: "grid", placeItems: "center", margin: "0 auto 16px", color: "var(--color-text-muted)" }}>
+              <Footprints width={24} height={24} />
+            </div>
+            <p className="text-caption" style={{ fontSize: 14 }}>Not found</p>
+          </div>
         )}
       </section>
     </div>

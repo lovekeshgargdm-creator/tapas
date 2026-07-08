@@ -1,3 +1,4 @@
+import { Dna, Wind, History, Ruler } from "lucide-react";
 import type { SVGProps } from "react";
 
 type P = SVGProps<SVGSVGElement>;
@@ -38,23 +39,9 @@ export const IconMove = (p: P) => (
   </svg>
 );
 
-export const IconYoga = (p: P) => (
-  <svg {...base(p, "lucide:person-standing")}>
-    <circle cx="12" cy="4.5" r="2" />
-    <path d="M12 7v5" />
-    <path d="M5 20c1.5-3 4-5 7-5s5.5 2 7 5" />
-    <path d="M12 12 5.5 15" />
-    <path d="M12 12l6.5 3" />
-  </svg>
-);
+export const IconYoga = (p: P) => <Dna {...p} />;
 
-export const IconBreathe = (p: P) => (
-  <svg {...base(p, "lucide:wind")}>
-    <path d="M2 8h13a3 3 0 1 0-3-3" />
-    <path d="M2 12h16a3.5 3.5 0 1 1-3.5 3.5" />
-    <path d="M2 16h7a3 3 0 1 1-3 3" />
-  </svg>
-);
+export const IconBreathe = (p: P) => <Wind {...p} />;
 
 export const IconPatterns = (p: P) => (
   <svg {...base(p, "lucide:chart-no-axes-combined")}>
@@ -218,12 +205,12 @@ export const IconBolt = (p: P) => (
 );
 
 export const IconGoogle = (p: P) => (
-  <svg width={20} height={20} viewBox="0 0 24 24" data-icon="simple-icons:google" {...p}>
-    <path
-      fill="#EA4335"
-      d="M12 10.2v3.9h5.5c-.24 1.44-1.66 4.22-5.5 4.22-3.3 0-6-2.73-6-6.1s2.7-6.1 6-6.1c1.88 0 3.14.8 3.86 1.49l2.63-2.53C16.9 3.6 14.68 2.6 12 2.6 6.98 2.6 2.9 6.68 2.9 11.7s4.08 9.1 9.1 9.1c5.25 0 8.73-3.69 8.73-8.89 0-.6-.06-1.05-.14-1.5H12z"
-    />
-    <path fill="#34A853" d="M3.9 7.6l3.2 2.35C7.9 8.1 9.77 6.7 12 6.7c1.88 0 3.14.8 3.86 1.49l2.63-2.53C16.9 3.6 14.68 2.6 12 2.6 8.3 2.6 5.1 4.72 3.9 7.6z" opacity="0" />
+  <svg width={20} height={20} viewBox="0 0 24 24" {...p}>
+    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    <path fill="none" d="M1 1h22v22H1z" />
   </svg>
 );
 
@@ -261,25 +248,59 @@ export const IconUser = (p: P) => (
   </svg>
 );
 
-export const IconTrain = (p: P) => (
-  <svg {...base(p, "lucide:dumbbell")}>
-    <path d="M6 8h12" />
-    <path d="M4 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" stroke="none" />
-    <path d="M20 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" stroke="none" />
-    <path d="M6 12h12" />
-    <path d="M4 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" stroke="none" />
-    <path d="M20 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="currentColor" stroke="none" />
+export const IconFeather = (p: P) => (
+  <svg {...base(p, "lucide:feather")}>
+    <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" />
+    <line x1="16" y1="8" x2="2" y2="22" />
+    <line x1="17.5" y1="15" x2="9" y2="6.5" />
+  </svg>
+);
+
+export const IconBiceps = (p: P) => (
+  <svg {...base(p, "lucide:biceps-flexed")}>
+    <path d="M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-10 7-1.5 0-2.607-.577-3.414-1.284a1.85 1.85 0 0 1-.225-2.65l5.247-5.91Z" />
+    <path d="M15 14v-2.5a2.5 2.5 0 0 0-5 0V14" />
+    <path d="M12.409 13.017 6.131 5.925a1.85 1.85 0 0 0-2.65-.225C2.674 6.407 2 7.507 2 9c0 6 3.134 10 7 10" />
+    <path d="M9 19c-1.5 0-2.607-.577-3.414-1.284a1.85 1.85 0 0 1-.225-2.65" />
+  </svg>
+);
+
+export const IconReach = (p: P) => (
+  <svg {...base(p, "tapas:reach")}>
+    <circle cx="12" cy="4" r="2" />
+    <path d="M12 6v7" />
+    <path d="M12 13l-4 8" />
+    <path d="M12 13l4 8" />
+    <path d="M12 7L7 2" />
+    <path d="M12 7l5-5" />
+  </svg>
+);
+
+export const IconLeaf = (p: P) => (
+  <svg {...base(p, "lucide:leaf")}>
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
   </svg>
 );
 
 export const IconDumbbell = (p: P) => (
   <svg {...base(p, "lucide:dumbbell")}>
-    <path d="M6.5 6.5h11" />
-    <path d="M6.5 17.5h11" />
-    <path d="M3 8.5v7" strokeWidth="3" strokeLinecap="round" />
-    <path d="M21 8.5v7" strokeWidth="3" strokeLinecap="round" />
-    <path d="M5 6.5v11" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M19 6.5v11" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M17.596 12.768a2 2 0 1 0 2.829-2.829l-1.768-1.767a2 2 0 0 0 2.828-2.829l-2.828-2.828a2 2 0 0 0-2.829 2.828l-1.767-1.768a2 2 0 1 0-2.829 2.829z" />
+    <path d="m2.5 21.5 1.4-1.4" />
+    <path d="m20.1 3.9 1.4-1.4" />
+    <path d="M5.343 21.485a2 2 0 1 0 2.829-2.828l1.767 1.768a2 2 0 1 0 2.829-2.829l-6.364-6.364a2 2 0 1 0-2.829 2.829l1.768 1.767a2 2 0 0 0-2.828 2.829z" />
+    <path d="m9.6 14.4 4.8-4.8" />
+  </svg>
+);
+
+export const IconMobility = (p: P) => (
+  <svg {...base(p, "lucide:move")}>
+    <path d="M12 2v20" />
+    <path d="m8 18 4 4 4-4" />
+    <path d="m8 6 4-4 4 4" />
+    <path d="M2 12h20" />
+    <path d="m18 8 4 4-4 4" />
+    <path d="m6 8-4 4 4 4" />
   </svg>
 );
 
@@ -299,13 +320,15 @@ export const IconJournal = (p: P) => (
 );
 
 export const IconRoutine = (p: P) => (
-  <svg {...base(p, "lucide:route")}>
-    <path d="M3 12h18M12 3v18" />
-    <circle cx="12" cy="12" r="3" />
-    <circle cx="12" cy="4" r="1.5" fill="currentColor" stroke="none" />
-    <circle cx="12" cy="20" r="1.5" fill="currentColor" stroke="none" />
-    <circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none" />
-    <circle cx="20" cy="12" r="1.5" fill="currentColor" stroke="none" />
+  <svg {...base(p, "lucide:calendar-sync")}>
+    <path d="M11 10v4h4" />
+    <path d="m11 14 1.535-1.605a5 5 0 0 1 8 1.5" />
+    <path d="M16 2v4" />
+    <path d="m21 18-1.535 1.605a5 5 0 0 1-8-1.5" />
+    <path d="M21 22v-4h-4" />
+    <path d="M21 8.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4.3" />
+    <path d="M3 10h4" />
+    <path d="M8 2v4" />
   </svg>
 );
 
@@ -317,13 +340,7 @@ export const IconWarmup = (p: P) => (
   </svg>
 );
 
-export const IconPranayama = (p: P) => (
-  <svg {...base(p, "lucide:wind")}>
-    <path d="M2 8h13a3 3 0 1 0-3-3" />
-    <path d="M2 12h16a3.5 3.5 0 1 1-3.5 3.5" />
-    <path d="M2 16h7a3 3 0 1 1-3 3" />
-  </svg>
-);
+export const IconPranayama = (p: P) => <Wind {...p} />;
 
 export const IconTrash = (p: P) => (
   <svg {...base(p, "lucide:trash-2")}>
@@ -429,11 +446,29 @@ export const IconActivity = (p: P) => (
   </svg>
 );
 
-export const IconRuler = (p: P) => (
-  <svg {...base(p, "lucide:ruler")}>
-    <path d="M22.65 14.39L12 22l-9.65-7.61a2.12 2.12 0 0 1-.22-2.91l6-7.85a2.12 2.12 0 0 1 3.23-.23l8.07 7.7a2.12 2.12 0 0 1 .22 2.91z" />
-    <path d="M16 11l-2 2" />
-    <path d="M13 14l-2 2" />
-    <path d="M10 17l-2 2" />
+export const IconRuler = (p: P) => <Ruler {...p} />;
+
+export const IconCircleCheckBig = (p: P) => (
+  <svg {...base(p, "lucide:circle-check-big")}>
+    <path d="M21.801 10A10 10 0 1 1 17 3.335" />
+    <path d="m9 11 3 3L22 4" />
   </svg>
 );
+
+export const IconEye = (p: P) => (
+  <svg {...base(p, "lucide:eye")}>
+    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const IconEyeOff = (p: P) => (
+  <svg {...base(p, "lucide:eye-off")}>
+    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+    <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+    <line x1="2" y1="2" x2="22" y2="22" />
+  </svg>
+);
+
+export const IconHistory = (p: P) => <History {...p} />;

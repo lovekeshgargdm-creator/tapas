@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { fetchExerciseDetails } from "@/app/actions/exercise";
 import { fetchYogaPoseMediaMap, type YogaPoseMedia } from "@/app/actions/yoga";
 import { AppHeader } from "@/components/AppHeader";
@@ -11,8 +12,8 @@ import { ASANAS, ROUTINE_PRESETS, TECHNIQUES, type PresetItem, type RoutinePrese
 import { useStore, uid, todayISO } from "@/lib/store";
 import {
   IconSearch, IconPlus,
-  IconDumbbell, IconTrain,
-  IconTrash, IconClose, IconPlay, IconYoga, IconBreathe, IconEdit, IconStar, IconCopy, IconChevron,
+  IconDumbbell,
+  IconTrash, IconClose, IconPlay, IconYoga, IconBreathe, IconEdit, IconStar, IconCopy, IconChevron, IconCheck, IconCircleCheckBig
 } from "@/components/Icons";
 import type { WeeklyRoutine, DayRoutine, DayOfWeek, RoutineItem } from "@/lib/types";
 
@@ -66,6 +67,23 @@ export default function TrainPage() {
   const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
   const [creatingPresetId, setCreatingPresetId] = useState<string | null>(null);
   const [routineTab, setRoutineTab] = useState<"all" | "favorites" | "presets">("all");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      if (tab === "all" || tab === "favorites" || tab === "presets") {
+        setRoutineTab(tab);
+      }
+    }
+  }, []);
+
+  const handleSetRoutineTab = (tab: "all" | "favorites" | "presets") => {
+    setRoutineTab(tab);
+    if (typeof window !== "undefined") {
+      router.replace(`/routine?tab=${tab}`, { scroll: false });
+    }
+  };
 
   const toggleDay = (d: DayOfWeek) => {
     setDayRoutines((prev) => prev.map((dr) => dr.day === d ? { ...dr, enabled: !dr.enabled } : dr));
@@ -137,6 +155,18 @@ export default function TrainPage() {
     const routine = weeklyRoutines.find((item) => item.id === editId);
     if (routine) editRoutine(routine);
   }, [searchParams, weeklyRoutines, editingRoutineId]);
+
+  useEffect(() => {
+    const presetId = searchParams.get("preset");
+    if (!presetId || creatingPresetId === presetId) return;
+    const presetObj = ROUTINE_PRESETS.find((p) => p.id === presetId);
+    if (presetObj && !creatingPresetId) {
+      createRoutineFromPreset(presetObj);
+      if (typeof window !== "undefined") {
+        router.replace("/routine?tab=all", { scroll: false });
+      }
+    }
+  }, [searchParams, creatingPresetId, router]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -289,6 +319,7 @@ export default function TrainPage() {
 
   const createRoutineFromPreset = async (preset: RoutinePreset) => {
     setCreatingPresetId(preset.id);
+    await new Promise((resolve) => setTimeout(resolve, 800));
     const poseMedia = await fetchYogaPoseMediaMap();
     const items = (await Promise.all(preset.items.map((item) => itemFromPreset(item, poseMedia)))).filter(Boolean) as RoutineItem[];
     if (items.length === 0) {
@@ -312,6 +343,8 @@ export default function TrainPage() {
       updatedAt: todayISO(),
     });
     setCreatingPresetId(null);
+    handleSetRoutineTab("all");
+    setShowSuccessModal(true);
   };
 
   const routineList = weeklyRoutines
@@ -326,7 +359,7 @@ export default function TrainPage() {
   return (
     <div className="page">
       {!buildingRoutine ? (
-        <AppHeader title="Routine" subtitle="Build training and yoga together" accent="#73fd9c" />
+        <AppHeader title="Routine" subtitle="Build training and yoga together" />
       ) : (
         <BackHeader 
           title={editingRoutineId ? "Edit Routine" : "Create Routine"} 
@@ -346,7 +379,7 @@ export default function TrainPage() {
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setRoutineTab(tab.id as "all" | "favorites" | "presets")}
+                    onClick={() => handleSetRoutineTab(tab.id as "all" | "favorites" | "presets")}
                     style={{
                       border: "none",
                       borderRadius: 9,
@@ -388,7 +421,7 @@ export default function TrainPage() {
 
                   {visibleRoutines.length === 0 ? (
                     <div className="clay" style={{ padding: 24, textAlign: "center" }}>
-                      <div style={{ marginBottom: 10, color: "var(--color-text-muted)" }}><IconTrain width={40} height={40} /></div>
+                      <div style={{ marginBottom: 10, color: "var(--color-text-muted)" }}><IconDumbbell width={40} height={40} /></div>
                       <div style={{ fontWeight: 600, marginBottom: 6 }}>{routineTab === "favorites" ? "No favorite routines yet." : "No routines yet."}</div>
                       <div className="text-caption">
                         {routineTab === "favorites"
@@ -431,6 +464,25 @@ export default function TrainPage() {
           )}
         </div>
 
+        <AnimatePresence>
+          {showSuccessModal && (
+            <CenterModal onClose={() => setShowSuccessModal(false)} title="Success">
+              <div style={{ textAlign: "center", padding: "8px 0 16px" }}>
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 150, damping: 12 }}>
+                  <div style={{ padding: "10px 0 20px", display: "grid", placeItems: "center" }}>
+                    <IconCircleCheckBig width={50} height={50} style={{ color: "var(--color-mint-active)", filter: "drop-shadow(0 0 6px rgba(115,253,156,0.4))" }} />
+                  </div>
+                </motion.div>
+                <p style={{ margin: "0 0 24px", color: "var(--color-text-secondary)", fontSize: 15 }}>
+                  Routine added to your list successfully!
+                </p>
+                <button className="btn btn-primary btn-block btn-lg" onClick={() => setShowSuccessModal(false)}>
+                  Awesome
+                </button>
+              </div>
+            </CenterModal>
+          )}
+        </AnimatePresence>
     </div>
   );
 }
@@ -456,20 +508,28 @@ function PresetSection({
         const hasPose = preset.items.some((item) => item.type === "asana");
         const hasBreath = preset.items.some((item) => item.type === "pranayama");
         return (
-          <div key={preset.id} className="card" style={{ padding: 14 }}>
-            <div className="row between" style={{ gap: 12, alignItems: "flex-start" }}>
-              <div style={{ minWidth: 0 }}>
-                <div className="row gap-xs wrap" style={{ marginBottom: 8 }}>
-                  <span className="pill" style={{ color: preset.accent, borderColor: `${preset.accent}55` }}>{preset.category}</span>
-                  <span className="pill">{preset.days.length} days</span>
-                  <span className="pill">{preset.items.length} items</span>
+          <div key={preset.id} className="card" style={{ padding: 0, position: "relative", overflow: "hidden", marginBottom: 16 }}>
+            {preset.image && (
+              <>
+                <div style={{ position: "absolute", top: 0, right: 0, width: "65%", height: "100%", backgroundImage: `url(${preset.image})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.35, pointerEvents: "none", WebkitMaskImage: "linear-gradient(to right, transparent, black 80%)", maskImage: "linear-gradient(to right, transparent, black 80%)" }} />
+                <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: `linear-gradient(135deg, color-mix(in srgb, ${preset.accent} 10%, transparent) 0%, transparent 70%)`, pointerEvents: "none" }} />
+              </>
+            )}
+            <div className="row between" style={{ padding: 18, gap: 12, alignItems: "flex-start", position: "relative", zIndex: 1 }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div className="row gap-xs wrap" style={{ marginBottom: 12 }}>
+                  <span className="pill" style={{ color: preset.accent, borderColor: `color-mix(in srgb, ${preset.accent} 25%, transparent)`, background: `color-mix(in srgb, ${preset.accent} 8%, transparent)` }}>{preset.category}</span>
+                  <span className="pill" style={{ background: "var(--color-surface-2)" }}>{preset.days.length} days</span>
+                  <span className="pill" style={{ background: "var(--color-surface-2)" }}>{preset.items.length} items</span>
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 850, margin: 0 }}>{preset.name}</h3>
-                <p className="text-caption" style={{ marginTop: 5, lineHeight: 1.4 }}>{preset.description}</p>
-                <div className="row gap-xs wrap" style={{ marginTop: 10 }}>
-                  {hasTrain && <span className="pill"><IconDumbbell width={12} height={12} /> Train</span>}
-                  {hasPose && <span className="pill"><IconYoga width={12} height={12} /> Yoga</span>}
-                  {hasBreath && <span className="pill"><IconBreathe width={12} height={12} /> Breathe</span>}
+                <h3 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: "var(--color-text-primary)", letterSpacing: "-0.2px" }}>{preset.name}</h3>
+                <p className="text-caption" style={{ marginTop: 6, lineHeight: 1.45, fontSize: 13, maxWidth: "85%" }}>{preset.description}</p>
+                <div className="row wrap" style={{ marginTop: 14, alignItems: "center" }}>
+                  {hasTrain && <span className="row" style={{ color: "var(--color-text-muted)", fontSize: 12, fontWeight: 600 }}><IconDumbbell width={14} height={14} style={{ marginRight: 4 }} /> Train</span>}
+                  {hasTrain && hasPose && <div style={{ width: 1, height: 12, background: "var(--color-outline-muted)", margin: "0 10px" }} />}
+                  {hasPose && <span className="row" style={{ color: "var(--color-text-muted)", fontSize: 12, fontWeight: 600 }}><IconYoga width={14} height={14} style={{ marginRight: 4 }} /> Yoga</span>}
+                  {(hasTrain || hasPose) && hasBreath && <div style={{ width: 1, height: 12, background: "var(--color-outline-muted)", margin: "0 10px" }} />}
+                  {hasBreath && <span className="row" style={{ color: "var(--color-text-muted)", fontSize: 12, fontWeight: 600 }}><IconBreathe width={14} height={14} style={{ marginRight: 4 }} /> Breathe</span>}
                 </div>
               </div>
               <button
@@ -478,12 +538,13 @@ function PresetSection({
                 disabled={Boolean(creatingPresetId)}
                 style={{
                   minHeight: 36,
-                  padding: "7px 12px",
-                  fontSize: 12,
+                  padding: "8px 16px",
+                  fontSize: 13,
                   flexShrink: 0,
+                  borderRadius: 20
                 }}
               >
-                <IconPlus width={14} height={14} /> {isCreating ? "Adding" : "Add"}
+                <IconPlus width={15} height={15} /> {isCreating ? "Adding" : "Add"}
               </button>
             </div>
           </div>
@@ -702,6 +763,8 @@ function TrainRoutineBuilder({
   );
 }
 
+
+
 function TrainRoutineCard({
   routine,
   onUse,
@@ -720,19 +783,24 @@ function TrainRoutineCard({
   const enabledDays = routine.days.filter((d) => d.enabled);
   const itemCount = enabledDays.reduce((sum, day) => sum + day.items.length, 0);
   const hasItems = itemCount > 0;
+  let trainCount = 0;
+  let poseCount = 0;
+  let breathCount = 0;
+  enabledDays.forEach(d => {
+    d.items.forEach(i => {
+      if (i.type === "exercise") trainCount++;
+      if (i.type === "asana") poseCount++;
+      if (i.type === "pranayama") breathCount++;
+    });
+  });
   
   return (
-    <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-      <div style={{ padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 14 }}>
-          <div style={{ minWidth: 0, paddingRight: 12 }}>
-            <h3 style={{ fontWeight: 800, fontSize: 17, margin: 0, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--color-text-primary)" }}>
-              {routine.name}
-            </h3>
-            <div className="text-caption">
-              {enabledDays.length} active days · {itemCount} item{itemCount === 1 ? "" : "s"} · {routine.module === "combined" ? "Yoga + Train" : "Training"}
-            </div>
-          </div>
+    <div className="card" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
+      <div style={{ padding: 16, position: "relative", zIndex: 1 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+          <h3 style={{ fontWeight: 800, fontSize: 18, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: "var(--color-text-primary)" }}>
+            {routine.name}
+          </h3>
           <button 
             onClick={onFavorite} 
             aria-label={routine.favorite ? "Remove favorite" : "Mark favorite"} 
@@ -747,38 +815,51 @@ function TrainRoutineCard({
           </button>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
-          {DAYS_LABELS.map((label, i) => {
-            const dr = routine.days.find((d) => d.day === i);
-            const active = dr?.enabled;
-            return (
-              <div 
-                key={i} 
-                style={{ 
-                  width: 30, height: 30, borderRadius: "50%", 
-                  display: "grid", placeItems: "center", fontSize: 11, fontWeight: 750,
-                  background: active ? "var(--color-mint-active)" : "var(--color-surface-main)",
-                  color: active ? "#000" : "var(--color-text-muted)",
-                  boxShadow: active ? "0 2px 8px rgba(115,253,156,0.3)" : "none"
-                }}
-              >
-                {label.charAt(0)}
-              </div>
-            );
-          })}
+        <div className="row gap-xs wrap" style={{ marginBottom: 18 }}>
+          {trainCount > 0 && <span className="pill row" style={{ color: "var(--color-train)", borderColor: "color-mix(in srgb, var(--color-train) 25%, transparent)", background: "color-mix(in srgb, var(--color-train) 8%, transparent)" }}><IconDumbbell width={12} height={12} style={{ marginRight: 4 }} /> {trainCount} {trainCount === 1 ? 'Exercise' : 'Exercises'}</span>}
+          {poseCount > 0 && <span className="pill row" style={{ color: "var(--color-yoga)", borderColor: "color-mix(in srgb, var(--color-yoga) 25%, transparent)", background: "color-mix(in srgb, var(--color-yoga) 8%, transparent)" }}><IconYoga width={12} height={12} style={{ marginRight: 4 }} /> {poseCount} {poseCount === 1 ? 'Pose' : 'Poses'}</span>}
+          {breathCount > 0 && <span className="pill row" style={{ color: "var(--color-breathe)", borderColor: "color-mix(in srgb, var(--color-breathe) 25%, transparent)", background: "color-mix(in srgb, var(--color-breathe) 8%, transparent)" }}><IconBreathe width={12} height={12} style={{ marginRight: 4 }} /> {breathCount} {breathCount === 1 ? 'Session' : 'Sessions'}</span>}
         </div>
 
-        <button 
-          className="btn btn-primary btn-block" 
-          style={{ minHeight: 46, borderRadius: 12, fontSize: 15 }} 
-          onClick={onUse} 
-          disabled={!hasItems}
-        >
-          <IconPlay width={18} height={18} /> Use Routine
-        </button>
+        <div className="row between" style={{ gap: 12 }}>
+          <div className="row" style={{ gap: 8 }}>
+            <div className="row" style={{ gap: 4 }}>
+              {DAYS_LABELS.map((label, i) => {
+                const dr = routine.days.find((d) => d.day === i);
+                const active = dr?.enabled;
+                return (
+                  <div 
+                    key={i} 
+                    style={{ 
+                      width: 24, height: 24, borderRadius: "50%", 
+                      display: "grid", placeItems: "center", fontSize: 10, fontWeight: 750,
+                      background: active ? "var(--color-mint-active)" : "var(--color-surface-main)",
+                      color: active ? "var(--color-surface-main)" : "var(--color-text-secondary)",
+                      boxShadow: active ? "0 2px 8px rgba(115,253,156,0.3)" : "none"
+                    }}
+                  >
+                    {label.charAt(0)}
+                  </div>
+                );
+              })}
+            </div>
+            <span className="pill" style={{ background: "color-mix(in srgb, var(--color-text-primary) 8%, transparent)", border: "1px solid var(--color-outline-muted)", padding: "4px 10px", fontSize: 11, color: "var(--color-text-secondary)", fontWeight: 600 }}>
+              {enabledDays.length} {enabledDays.length === 1 ? 'day' : 'days'}
+            </span>
+          </div>
+
+          <button 
+            className="btn btn-primary" 
+            style={{ minHeight: 36, borderRadius: 20, fontSize: 13, padding: "0 16px", flexShrink: 0 }} 
+            onClick={onUse} 
+            disabled={!hasItems}
+          >
+            <IconPlay width={14} height={14} style={{ marginRight: 4 }} /> Start
+          </button>
+        </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderTop: "1px solid var(--color-outline-muted)", background: "rgba(0,0,0,0.15)" }}>
+      <div style={{ position: "relative", zIndex: 10, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderTop: "1px solid var(--color-outline-muted)", background: "var(--color-surface-2)" }}>
         <button 
           onClick={onEdit} 
           style={{ padding: "14px 0", background: "none", border: "none", color: "var(--color-text-secondary)", fontSize: 13, fontWeight: 600, display: "flex", gap: 6, justifyContent: "center", alignItems: "center", cursor: "pointer" }}
@@ -798,6 +879,8 @@ function TrainRoutineCard({
           <IconTrash width={15} height={15} /> Delete
         </button>
       </div>
+
+
     </div>
   );
 }
@@ -806,3 +889,40 @@ const labelStyle: React.CSSProperties = {
   fontSize: 12.5, fontWeight: 600, color: "var(--color-text-muted)",
   textTransform: "uppercase", letterSpacing: "0.08em",
 };
+
+function CenterModal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, background: "rgba(4,8,6,0.68)", zIndex: 400 }}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+        className="glass"
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          translate: "-50% -50%",
+          width: "min(420px, calc(100% - 32px))",
+          zIndex: 401,
+          borderRadius: 18,
+          padding: 18,
+          boxSizing: "border-box",
+        }}
+      >
+        <div className="row center" style={{ gap: 12, alignItems: "flex-start", marginBottom: 14 }}>
+          <h3 className="section-title" style={{ fontSize: 18, margin: 0 }}>{title}</h3>
+        </div>
+        {children}
+      </motion.div>
+    </>
+  );
+}

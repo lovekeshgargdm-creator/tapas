@@ -16,7 +16,7 @@ export function Logo({ size = 64, withGlow = false }: LogoProps) {
         justifyContent: "center",
         borderRadius: "22%",
         overflow: "hidden",
-        filter: withGlow ? "drop-shadow(0 0 18px rgba(115,253,156,0.45))" : undefined,
+        boxShadow: withGlow ? "0 0 18px rgba(115,253,156,0.45)" : undefined,
       }}
     >
       <Image

@@ -8,7 +8,7 @@ import { Ambient } from "@/components/Ambient";
 import { InstallAppCard } from "@/components/InstallAppCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useStore } from "@/lib/store";
-import { IconGoogle, IconArrowRight } from "@/components/Icons";
+import { IconGoogle, IconArrowRight, IconClose, IconCheck, IconEye, IconEyeOff } from "@/components/Icons";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
 import { prepareSignedInUser } from "@/lib/supabaseSync";
 
@@ -21,8 +21,10 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(() => {
     if (isAuthed) router.replace(onboarded ? "/home" : "/onboarding");
@@ -57,7 +59,12 @@ export default function LoginPage() {
     }
 
     if (!result.data.session || !result.data.user) {
-      setMessage("Check your email to confirm your account, then sign in.");
+      if (mode === "signup") {
+        setMessage("Account created successfully! Please sign in.");
+        setMode("signin");
+      } else {
+        setMessage("Check your email to confirm your account, then sign in.");
+      }
       setBusy(false);
       return;
     }
@@ -144,29 +151,22 @@ export default function LoginPage() {
           style={{ padding: 22 }}
         >
           {/* segmented toggle */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              background: "var(--color-surface-main)",
-              borderRadius: 12,
-              padding: 4,
-              marginBottom: 20,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", background: "var(--color-surface-2)", padding: 4, borderRadius: 12, marginBottom: 24, border: "1px solid var(--color-border)" }}>
             {(["signin", "signup"] as const).map((m) => (
               <button
                 key={m}
-                onClick={() => setMode(m)}
+                onClick={() => setMode(m as any)}
                 style={{
-                  padding: "10px 0",
-                  borderRadius: 9,
+                  padding: "8px 12px",
+                  borderRadius: 8,
                   border: "none",
                   fontWeight: 600,
                   fontSize: 14,
-                  background: mode === m ? "var(--color-surface-3)" : "transparent",
-                  color: mode === m ? "var(--color-text-primary)" : "var(--color-text-muted)",
+                  background: mode === m ? "var(--color-surface-main)" : "transparent",
+                  color: mode === m ? "var(--color-text-primary)" : "var(--color-text-secondary)",
+                  boxShadow: mode === m ? "0 1px 3px rgba(0,0,0,0.06), 0 0 0 1px var(--color-border)" : "none",
                   transition: "all .2s",
+                  cursor: "pointer"
                 }}
               >
                 {m === "signin" ? "Sign in" : "Create account"}
@@ -197,18 +197,41 @@ export default function LoginPage() {
               />
             </Field>
             <Field label="Password">
-              <input
-                className="input"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className="input"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ paddingRight: 40 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--color-text-muted)",
+                    cursor: "pointer",
+                    padding: 4,
+                    display: "grid",
+                    placeItems: "center"
+                  }}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <IconEyeOff width={18} height={18} /> : <IconEye width={18} height={18} />}
+                </button>
+              </div>
             </Field>
 
             <button className="btn btn-primary btn-block btn-lg" disabled={busy} type="submit" style={{ marginTop: 4 }}>
-              {busy ? "One moment…" : mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? (mode === "signin" ? "Signing in…" : "Creating account…") : mode === "signin" ? "Sign in" : "Create account"}
               {!busy && <IconArrowRight width={18} height={18} />}
             </button>
             {message && (
@@ -225,7 +248,10 @@ export default function LoginPage() {
           </div>
 
           <button className="btn btn-secondary btn-block" onClick={google} disabled={busy}
-            style={{ background: "var(--color-surface-main)", border: "1px solid var(--color-text-muted)", color: "var(--color-text-primary)" }}>
+            style={{ background: "var(--color-surface-main)", border: "1px solid var(--color-text-muted)", color: "var(--color-text-primary)", fontWeight: 500, transition: "background 0.2s" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "var(--color-surface-2)")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "var(--color-surface-main)")}
+          >
             <IconGoogle />
             Continue with Google
           </button>
@@ -236,9 +262,61 @@ export default function LoginPage() {
         </div>
 
         <p className="text-caption muted" style={{ textAlign: "center", marginTop: 14, lineHeight: 1.5 }}>
-          By continuing you agree to our Terms & Privacy.<br />
+          By continuing you agree to our{" "}
+          <span onClick={() => setShowPrivacy(true)} style={{ textDecoration: "underline", cursor: "pointer", color: "inherit" }}>
+            Terms & Privacy
+          </span>.<br />
           Your practice data stays private to you.
         </p>
+      </div>
+
+      <div 
+        style={{ 
+          position: "fixed", inset: 0, zIndex: 999, overflowY: "auto", 
+          padding: "max(24px, 5vh) 16px max(24px, 5vh) 16px", display: showPrivacy ? "flex" : "none",
+        }}
+      >
+        <div 
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }} 
+          onClick={() => setShowPrivacy(false)} 
+        />
+        <div 
+          className="card" 
+          style={{ position: "relative", zIndex: 1, maxWidth: 560, width: "100%", margin: "auto", padding: 24, boxShadow: "0 24px 48px rgba(0,0,0,0.6)" }}
+        >
+          <button 
+            onClick={() => setShowPrivacy(false)} 
+            style={{ position: "absolute", top: 16, right: 16, color: "var(--color-text-secondary)", background: "var(--color-surface-2)", border: "1px solid var(--color-border)", borderRadius: "50%", width: 32, height: 32, display: "grid", placeItems: "center", cursor: "pointer", transition: "all 0.2s" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "var(--color-surface-3)", e.currentTarget.style.color = "var(--color-text-primary)")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "var(--color-surface-2)", e.currentTarget.style.color = "var(--color-text-secondary)")}
+          >
+            <IconClose width={18} height={18} />
+          </button>
+          
+          <div style={{ marginBottom: 20, paddingRight: 32 }}>
+            <h2 className="text-xl" style={{ marginBottom: 6, fontWeight: 600 }}>Your privacy is our priority.</h2>
+            <p className="text-caption" style={{ color: "var(--color-text-secondary)", fontSize: 13, lineHeight: 1.4 }}>Everything you track in TAPAS stays strictly between you and your device.</p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {[
+              { title: "Strictly Confidential", text: "We never sell or share your personal information with third parties. Ever." },
+              { title: "Secure Storage", text: "All practice routines, body measurements, and logs are stored securely within your TAPAS account." },
+              { title: "Full Control", text: "You have full control over your data. You can clear your local device cache at any time by simply signing out." },
+              { title: "Easy Exports", text: "Want a personal backup? You can easily export your entire health journey at any time." },
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", gap: 12, alignItems: "flex-start", background: "var(--color-surface-2)", padding: "12px 14px", borderRadius: 12, border: "1px solid var(--color-border)" }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--color-surface-3)", border: "1px solid var(--color-border)", display: "grid", placeItems: "center", flexShrink: 0, marginTop: 2 }}>
+                  <IconCheck width={14} height={14} style={{ color: "var(--color-mint-active)" }} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 2 }}>{item.title}</h3>
+                  <p style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.4 }}>{item.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </main>
   );

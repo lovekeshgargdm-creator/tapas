@@ -17,6 +17,11 @@ import {
   IconShield,
   IconStar,
   IconTrash,
+  IconDumbbell,
+  IconLeaf,
+  IconBreathe,
+  IconFlame,
+  IconRuler,
 } from "@/components/Icons";
 import type { Gender, RoutineItem, WeeklyRoutine } from "@/lib/types";
 
@@ -25,6 +30,7 @@ const TITLES: Record<string, string> = {
   measurements: "Measurements",
   routines: "Routines",
   activity: "Account Activity",
+  roadmap: "Future Pipeline",
   support: "Help & Support",
   privacy: "Privacy Policy",
   terms: "Terms & Conditions",
@@ -32,16 +38,17 @@ const TITLES: Record<string, string> = {
 };
 
 const GOALS = [
-  { id: "strength", label: "Get stronger" },
-  { id: "flexible", label: "Get more flexible" },
-  { id: "stress", label: "Reduce stress & breathe better" },
-  { id: "consistency", label: "Build consistency" },
+  { id: "strength", label: "Get stronger", icon: IconDumbbell },
+  { id: "flexible", label: "Get more flexible", icon: IconLeaf },
+  { id: "stress", label: "Reduce stress & breathe better", icon: IconBreathe },
+  { id: "consistency", label: "Build consistency", icon: IconFlame },
 ];
 
 const initials = (name: string, email: string) => {
-  const source = name.trim() || email.split("@")[0] || "T";
-  const parts = source.split(/\s+/).filter(Boolean);
-  return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
+  const n = name || email || "User";
+  const parts = n.split(/[\s_.-]+/);
+  if (parts.length > 1) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return n.substring(0, 2).toUpperCase();
 };
 
 function cloneRoutineItem(item: RoutineItem): RoutineItem {
@@ -69,6 +76,7 @@ export default function ProfileSectionPage() {
   const [goalDraft, setGoalDraft] = useState<string[]>([]);
   const [currentPassword, setCurrentPassword] = useState("");
   const [nextPassword, setNextPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordMessage, setPasswordMessage] = useState("");
   const [inputError, setInputError] = useState("");
 
@@ -80,9 +88,21 @@ export default function ProfileSectionPage() {
   const [mThighs, setMThighs] = useState("");
   const [mCalves, setMCalves] = useState("");
   const [mNeck, setMNeck] = useState("");
+  const [mBodyFat, setMBodyFat] = useState("");
   const [saved, setSaved] = useState(false);
   const [profileRoutineSearch, setProfileRoutineSearch] = useState("");
   const [profileRoutineFilter, setProfileRoutineFilter] = useState<"all" | "favorites">("all");
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      s.setProfile({ avatarUrl: dataUrl });
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     if (!mounted) return;
@@ -101,6 +121,7 @@ export default function ProfileSectionPage() {
     setMThighs(latest?.thighs ? String(latest.thighs) : "");
     setMCalves(latest?.calves ? String(latest.calves) : "");
     setMNeck(latest?.neck ? String(latest.neck) : "");
+    setMBodyFat(latest?.bodyFat !== undefined ? String(latest.bodyFat) : "");
   }, [mounted, s.profile, s.body]);
 
   const accountLogs = useMemo(
@@ -128,9 +149,9 @@ export default function ProfileSectionPage() {
 
   const savePersonal = () => {
     let ageVal = parseInt(editAge, 10);
-    let heightVal = parseFloat(editHeight);
-    if (isNaN(ageVal) || ageVal < 1) ageVal = 0;
+    if (isNaN(ageVal) || ageVal < 1) ageVal = 1;
     if (ageVal > LIMITS.age) ageVal = LIMITS.age;
+    let heightVal = parseFloat(editHeight);
     if (isNaN(heightVal) || heightVal < 50) heightVal = 0;
     if (heightVal > LIMITS.heightCm) heightVal = LIMITS.heightCm;
     s.setProfile({
@@ -159,11 +180,20 @@ export default function ProfileSectionPage() {
   };
 
   const savePassword = () => {
+    if (nextPassword === currentPassword) {
+      setPasswordMessage("New password cannot be the same as current password.");
+      return;
+    }
+    if (nextPassword !== confirmPassword) {
+      setPasswordMessage("New password and confirm password do not match.");
+      return;
+    }
     const result = s.changePassword(currentPassword, nextPassword);
     setPasswordMessage(result.message);
     if (result.ok) {
       setCurrentPassword("");
       setNextPassword("");
+      setConfirmPassword("");
     }
   };
 
@@ -185,6 +215,7 @@ export default function ProfileSectionPage() {
       thighs: parse(mThighs, LIMITS.thighsCm),
       calves: parse(mCalves, LIMITS.calvesCm),
       neck: parse(mNeck, LIMITS.neckCm),
+      bodyFat: parse(mBodyFat, 100),
     });
     setSaved(true);
     setInputError("");
@@ -210,12 +241,11 @@ export default function ProfileSectionPage() {
     });
   };
 
-  const showLimit = (label: string, max: number, unit = "", reason: "max" | "negative" = "max") => {
-    setInputError(
-      reason === "negative"
-        ? `${label} cannot be negative.`
-        : `${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}.`,
-    );
+  const showLimit = (label: string, max: number, unit = "", reason: "max" | "min" | "negative" = "max", min = 1) => {
+    if (reason === "negative") setInputError(`${label} cannot be negative.`);
+    else if (reason === "min") setInputError(`${label} cannot be less than ${min} ${unit}.`.trim());
+    else setInputError(`${label} cannot be more than ${max} ${unit}.`.trim());
+    setTimeout(() => setInputError(""), 3000);
   };
 
   const heightDisplay = () => {
@@ -229,7 +259,6 @@ export default function ProfileSectionPage() {
 
   const genderLabel = (g?: string) => {
     if (!g) return "-";
-    if (g === "prefer_not_to_say") return "Prefer not to say";
     return g.charAt(0).toUpperCase() + g.slice(1);
   };
 
@@ -259,22 +288,58 @@ export default function ProfileSectionPage() {
       {section === "personal" && (
         <div>
           <section className="card" style={{ marginBottom: 22, padding: 20, display: "flex", alignItems: "center", gap: 16 }}>
-            <div
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: "50%",
-                display: "grid",
-                placeItems: "center",
-                border: "2px solid var(--color-mint-active)",
-                background: "rgba(115,253,156,0.08)",
-                color: "var(--color-mint-active)",
-                fontSize: 26,
-                fontWeight: 800,
-                flexShrink: 0
-              }}
-            >
-              {initials(s.profile.name, s.profile.email)}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+              <div style={{ position: "relative" }}>
+                <label
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    overflow: "hidden",
+                    border: "2px solid var(--color-mint-active)",
+                    background: "rgba(115,253,156,0.08)",
+                    color: "var(--color-mint-active)",
+                    fontSize: 26,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                    cursor: "pointer",
+                    position: "relative",
+                    margin: 0,
+                    background: "var(--color-surface-main)",
+                    border: "1px solid rgba(115,253,156,0.28)",
+                  }}
+                >
+                  <input type="file" accept="image/*, image/png, image/jpeg" onChange={handleImageUpload} style={{ display: "none" }} />
+                  {s.profile.avatarUrl ? (
+                    <img src={s.profile.avatarUrl} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <>{initials(s.profile.name || "Name", s.profile.email || "")}</>
+                  )}
+                </label>
+                <div 
+                  style={{
+                    position: "absolute",
+                    bottom: -2,
+                    right: -2,
+                    background: "var(--color-surface-2)",
+                    border: "2px solid var(--color-surface-main)",
+                    color: "var(--color-text-primary)",
+                    borderRadius: "50%",
+                    width: 24,
+                    height: 24,
+                    display: "grid",
+                    placeItems: "center",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <IconEdit width={12} height={12} />
+                </div>
+              </div>
+              {s.profile.avatarUrl && (
+                <button onClick={() => s.setProfile({ avatarUrl: "" })} style={{ background: "none", border: "none", color: "var(--color-status-error)", fontSize: 11, fontWeight: 700, cursor: "pointer", padding: "2px 6px" }}>Remove</button>
+              )}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               {editingAccount ? (
@@ -312,118 +377,150 @@ export default function ProfileSectionPage() {
             )}
           </section>
 
-          <section className="card" style={{ marginBottom: 18 }}>
-            <div className="row between" style={{ gap: 12, marginBottom: 10 }}>
-              <SectionTitle>Ayurvedic Profile</SectionTitle>
-              <Link href="/onboarding?retake=true" className="pill pill-active" style={{ textDecoration: "none" }}>
-                {dosha ? "Retake quiz" : "Take quiz"}
-              </Link>
-            </div>
-            {dosha ? (
-              <>
-                <h3 style={{ fontSize: 19, fontWeight: 700 }}>{dosha.name}</h3>
-                <p className="secondary" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
-                  {dosha.blurb}
+          <section className="card" style={{ marginBottom: 18, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div className="row between" style={{ gap: 12, marginBottom: 10 }}>
+                <SectionTitle>Ayurvedic Profile</SectionTitle>
+                <Link href="/onboarding?retake=true" className="btn btn-primary" style={{ padding: "6px 14px", minHeight: 32, fontSize: 13, borderRadius: 24, textDecoration: "none", fontWeight: 600 }}>
+                  {dosha ? "Retake quiz" : "Take quiz"}
+                </Link>
+              </div>
+              {dosha ? (
+                <>
+                  <h3 style={{ fontSize: 32, fontWeight: 900, background: "var(--grad-mint)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.03em", marginTop: 4, textShadow: "0 4px 12px rgba(19, 184, 94, 0.15)" }}>{dosha.name}</h3>
+                  <p className="secondary" style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
+                    {dosha.blurb}
+                  </p>
+                </>
+              ) : (
+                <p className="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
+                  Not determined yet. Take the dosha quiz to personalize your experience.
                 </p>
-              </>
-            ) : (
-              <p className="secondary" style={{ fontSize: 14, lineHeight: 1.6 }}>
-                Not determined yet. Take the dosha quiz to personalize your experience.
-              </p>
-            )}
+              )}
+            </div>
           </section>
 
-          <section className="card" style={{ marginBottom: 20, padding: "20px 16px" }}>
-            <div className="row between" style={{ marginBottom: 16 }}>
-              <SectionTitle>Active Focus Areas</SectionTitle>
-              <button className="icon-btn" onClick={() => (editingGoals ? saveGoals() : setEditingGoals(true))} aria-label="Edit goals" style={{ color: "var(--color-mint-active)" }}>
-                {editingGoals ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
-              </button>
-            </div>
-            {editingGoals ? (
-              <div className="stack gap-sm">
-                <div className="row gap-sm wrap" style={{ marginBottom: 12 }}>
-                  {GOALS.map((goal) => (
-                    <button
-                      key={goal.id}
-                      className={`chip ${goalDraft.includes(goal.id) ? "active" : ""}`}
-                      onClick={() => toggleGoal(goal.id)}
-                      style={{ justifyContent: "center", minHeight: 42, paddingInline: 16, border: goalDraft.includes(goal.id) ? "1px solid rgba(115,253,156,0.55)" : "1px solid rgba(115,253,156,0.18)" }}
-                    >
-                      {goal.label}
-                    </button>
-                  ))}
-                </div>
-                <button className="btn btn-primary btn-block" onClick={saveGoals}>Save Goals</button>
-              </div>
-            ) : s.profile.goals.length > 0 ? (
-              <div className="row gap-sm wrap">
-                {s.profile.goals.map((goal) => (
-                  <span className="pill pill-active" key={goal} style={{ padding: "6px 12px", fontSize: 13 }}>
-                    {GOALS.find((item) => item.id === goal)?.label || goal}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div style={{ padding: "12px 0", textAlign: "center" }}>
-                <p className="text-caption">No goals selected yet.</p>
-              </div>
-            )}
-          </section>
-
-          <section className="card" style={{ marginBottom: 20, padding: "20px 16px" }}>
-            <div className="row between" style={{ marginBottom: 16 }}>
-              <SectionTitle>Physical Profile</SectionTitle>
-              <button className="icon-btn" onClick={() => (editing ? savePersonal() : setEditing(true))} aria-label="Edit info" style={{ color: "var(--color-mint-active)" }}>
-                {editing ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
-              </button>
-            </div>
-            {inputError && <LimitNotice message={inputError} />}
-            {editing ? (
-              <div className="stack gap-md" style={{ padding: "4px 0" }}>
-                <Field label="Age">
-                  <input className="input" type="number" inputMode="numeric" min="1" max={LIMITS.age} value={editAge} onChange={(e) => setEditAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: (reason) => showLimit("Age", LIMITS.age, "", reason) }))} style={{ background: "var(--color-surface-1)" }} />
-                </Field>
-                <Field label="Gender">
-                  <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value as Gender)} style={{ background: "var(--color-surface-1)" }}>
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="prefer_not_to_say">Prefer not to say</option>
-                  </select>
-                </Field>
-                <Field label="Height (cm)">
-                  <input className="input" type="number" inputMode="decimal" min="50" max={LIMITS.heightCm} value={editHeight} onChange={(e) => setEditHeight(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: (reason) => showLimit("Height", LIMITS.heightCm, "cm", reason) }))} style={{ background: "var(--color-surface-1)" }} />
-                </Field>
-                <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} onClick={savePersonal}>
-                  Save
+          <section className="card" style={{ marginBottom: 20, padding: "20px 16px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div className="row between" style={{ marginBottom: 16 }}>
+                <SectionTitle>Active Focus Areas</SectionTitle>
+                <button className="icon-btn" onClick={() => (editingGoals ? saveGoals() : setEditingGoals(true))} aria-label="Edit goals" style={{ color: "var(--color-mint-active)" }}>
+                  {editingGoals ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
                 </button>
               </div>
-            ) : (
-              <div className="stack" style={{ gap: 0 }}>
-                <MetricRow label="Age" value={s.profile.age ? `${s.profile.age} years` : "-"} />
-                <MetricRow label="Gender" value={genderLabel(s.profile.gender)} />
-                <MetricRow label="Height" value={heightDisplay()} />
-              </div>
-            )}
+              {editingGoals ? (
+                <div className="stack gap-sm">
+                  <div className="row gap-sm wrap" style={{ marginBottom: 12 }}>
+                    {GOALS.map((goal) => {
+                      const Icon = goal.icon;
+                      return (
+                        <button
+                          key={goal.id}
+                          className={`chip ${goalDraft.includes(goal.id) ? "active" : ""}`}
+                          onClick={() => toggleGoal(goal.id)}
+                          style={{ 
+                            justifyContent: "center", 
+                            alignItems: "center",
+                            display: "inline-flex",
+                            gap: 8,
+                            minHeight: 42, 
+                            paddingInline: 18, 
+                            borderRadius: 24,
+                            background: goalDraft.includes(goal.id) ? "rgba(115,253,156,0.12)" : "rgba(255,255,255,0.03)",
+                            border: goalDraft.includes(goal.id) ? "1px solid rgba(115,253,156,0.2)" : "1px solid rgba(255,255,255,0.08)",
+                            color: goalDraft.includes(goal.id) ? "var(--color-mint-active)" : "var(--color-text-primary)",
+                            fontWeight: goalDraft.includes(goal.id) ? 700 : 500,
+                            transition: "all 0.2s ease"
+                          }}
+                        >
+                          <Icon width={16} height={16} style={{ opacity: goalDraft.includes(goal.id) ? 1 : 0.6 }} />
+                          {goal.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button className="btn btn-primary btn-block" onClick={saveGoals}>Save Goals</button>
+                </div>
+              ) : s.profile.goals.length > 0 ? (
+                <div className="row gap-sm wrap">
+                  {s.profile.goals.map((goalId) => {
+                    const goal = GOALS.find((item) => item.id === goalId);
+                    if (!goal) return null;
+                    const Icon = goal.icon;
+                    return (
+                      <span className="pill pill-active" key={goal.id} style={{ padding: "8px 16px", fontSize: 13, background: "rgba(115,253,156,0.12)", color: "var(--color-mint-active)", border: "1px solid rgba(115,253,156,0.2)", borderRadius: 24, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6, boxShadow: "0 2px 8px rgba(115,253,156,0.1)" }}>
+                        <Icon width={14} height={14} />
+                        {goal.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ padding: "12px 0", textAlign: "center" }}>
+                  <p className="text-caption">No goals selected yet.</p>
+                </div>
+              )}
+            </div>
           </section>
 
-          <section className="card" style={{ marginBottom: 20, padding: "20px 16px" }}>
-            <div className="row gap-sm" style={{ marginBottom: 16, color: "var(--color-mint-active)" }}>
-              <IconShield width={22} height={22} />
-              <SectionTitle>Account Security</SectionTitle>
+          <section className="card" style={{ marginBottom: 20, padding: "20px 16px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div className="row between" style={{ marginBottom: 16 }}>
+                <SectionTitle>Physical Profile</SectionTitle>
+                <button className="icon-btn" onClick={() => (editing ? savePersonal() : setEditing(true))} aria-label="Edit info" style={{ color: "var(--color-mint-active)" }}>
+                  {editing ? <IconCheck width={17} height={17} /> : <IconEdit width={17} height={17} />}
+                </button>
+              </div>
+              {inputError && <LimitNotice message={inputError} />}
+              {editing ? (
+                <div className="stack gap-md" style={{ padding: "4px 0" }}>
+                  <Field label="Age">
+                    <input className="input" type="number" inputMode="numeric" min="1" max={LIMITS.age} value={editAge} onChange={(e) => setEditAge(clampNumericInput(e.target.value, LIMITS.age, { min: 1, onLimit: (reason) => showLimit("Age", LIMITS.age, "", reason, 1) }))} />
+                  </Field>
+                  <Field label="Biological Sex (for workout calibration)">
+                    <select className="input" value={editGender} onChange={(e) => setEditGender(e.target.value as Gender)}>
+                      <option value="">Select</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </Field>
+                  <Field label="Height (cm)">
+                    <input className="input" type="number" inputMode="decimal" min="50" max={LIMITS.heightCm} value={editHeight} onChange={(e) => setEditHeight(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, min: 1, onLimit: (reason) => showLimit("Height", LIMITS.heightCm, "cm", reason, 1) }))} />
+                  </Field>
+                  <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} onClick={savePersonal}>
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <div className="stack" style={{ gap: 0 }}>
+                  <MetricRow label="Age" value={s.profile.age ? `${s.profile.age} years` : "-"} />
+                  <MetricRow label="Biological Sex" value={genderLabel(s.profile.gender)} />
+                  <MetricRow label="Height" value={heightDisplay()} />
+                </div>
+              )}
             </div>
-            <div className="stack gap-sm">
-              <Field label="Current password">
-                <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={{ background: "var(--color-surface-1)" }} />
-              </Field>
-              <Field label="New password">
-                <input className="input" type="password" minLength={8} value={nextPassword} onChange={(e) => setNextPassword(e.target.value)} style={{ background: "var(--color-surface-1)" }} />
-              </Field>
-              {passwordMessage && <p className="text-caption">{passwordMessage}</p>}
-              <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} onClick={savePassword} disabled={!currentPassword || nextPassword.length < 8}>
-                Update Password
-              </button>
+          </section>
+
+          <section className="card" style={{ marginBottom: 20, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "relative", zIndex: 1 }}>
+              <div className="row" style={{ gap: 12, marginBottom: 16 }}>
+                <SectionTitle>Account Security</SectionTitle>
+              </div>
+              <div className="stack gap-sm">
+                <Field label="Current password">
+                  <input className="input" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                </Field>
+                <Field label="New password">
+                  <input className="input" type="password" minLength={8} value={nextPassword} onChange={(e) => setNextPassword(e.target.value)} />
+                </Field>
+                <Field label="Confirm new password">
+                  <input className="input" type="password" minLength={8} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                </Field>
+                {passwordMessage && <p className="text-caption" style={{ color: passwordMessage.includes("match") || passwordMessage.includes("cannot") ? "var(--color-error-soft)" : "inherit" }}>{passwordMessage}</p>}
+                <button className="btn btn-primary btn-block" style={{ marginTop: 8 }} onClick={savePassword} disabled={!currentPassword || nextPassword.length < 8 || confirmPassword.length < 8}>
+                  Update Password
+                </button>
+              </div>
             </div>
           </section>
 
@@ -434,8 +531,8 @@ export default function ProfileSectionPage() {
       {section === "measurements" && (
         <div style={{ paddingBottom: 80 }}>
           <section className="card" style={{ padding: "14px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-surface-3)", color: "var(--color-mint-active)", display: "grid", placeItems: "center" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(115,253,156,0.12)", color: "var(--color-mint-active)", display: "grid", placeItems: "center" }}>
+              <IconRuler width={18} height={18} />
             </div>
             <div style={{ flex: 1 }}>
               <div className="text-caption" style={{ fontSize: 12 }}>Last Updated</div>
@@ -445,18 +542,41 @@ export default function ProfileSectionPage() {
             </div>
           </section>
 
-          {inputError && <LimitNotice message={inputError} />}
+
           
-          <div className="stack gap-sm">
-            <MeasurementCard label="Weight" unit="kg" latest={s.body[0]?.weight} value={mWeight} onChange={setMWeight} max={LIMITS.weightKg} onLimit={(reason) => showLimit("Weight", LIMITS.weightKg, "kg", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Body Fat" unit="%" latest={0} value={""} onChange={() => {}} max={100} onLimit={() => {}} tone="var(--color-text-main)" />
-            <MeasurementCard label="Chest" unit="cm" latest={s.body[0]?.chest} value={mChest} onChange={setMChest} max={LIMITS.chestCm} onLimit={(reason) => showLimit("Chest", LIMITS.chestCm, "cm", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Waist" unit="cm" latest={s.body[0]?.waist} value={mWaist} onChange={setMWaist} max={LIMITS.waistCm} onLimit={(reason) => showLimit("Waist", LIMITS.waistCm, "cm", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Hips" unit="cm" latest={s.body[0]?.hips} value={mHips} onChange={setMHips} max={LIMITS.hipsCm} onLimit={(reason) => showLimit("Hips", LIMITS.hipsCm, "cm", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Arms" unit="cm" latest={s.body[0]?.arms} value={mArms} onChange={setMArms} max={LIMITS.armsCm} onLimit={(reason) => showLimit("Arms", LIMITS.armsCm, "cm", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Thighs" unit="cm" latest={s.body[0]?.thighs} value={mThighs} onChange={setMThighs} max={LIMITS.thighsCm} onLimit={(reason) => showLimit("Thighs", LIMITS.thighsCm, "cm", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Calves" unit="cm" latest={s.body[0]?.calves} value={mCalves} onChange={setMCalves} max={LIMITS.calvesCm} onLimit={(reason) => showLimit("Calves", LIMITS.calvesCm, "cm", reason)} tone="var(--color-text-main)" />
-            <MeasurementCard label="Neck" unit="cm" latest={s.body[0]?.neck} value={mNeck} onChange={setMNeck} max={LIMITS.neckCm} onLimit={(reason) => showLimit("Neck", LIMITS.neckCm, "cm", reason)} tone="var(--color-text-main)" />
+          <div className="stack gap-lg">
+            <div>
+              <SectionTitle style={{ marginBottom: 12, paddingLeft: 4 }}>General</SectionTitle>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(19,184,94,0.06) 0%, transparent 60%)" label="Weight" unit="kg" latest={s.body[0]?.weight} value={mWeight} onChange={setMWeight} max={LIMITS.weightKg} onLimit={(reason) => showLimit("Weight", LIMITS.weightKg, "kg", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Weight") ? inputError : ""} />
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(19,184,94,0.06) 0%, transparent 60%)" label="Body Fat" unit="%" latest={s.body[0]?.bodyFat} value={mBodyFat} onChange={setMBodyFat} max={100} onLimit={(reason) => showLimit("Body Fat", 100, "%", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Body Fat") ? inputError : ""} />
+              </div>
+            </div>
+
+            <div>
+              <SectionTitle style={{ marginBottom: 12, paddingLeft: 4 }}>Upper Body</SectionTitle>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(0,134,109,0.06) 0%, transparent 60%)" label="Chest" unit="cm" latest={s.body[0]?.chest} value={mChest} onChange={setMChest} max={LIMITS.chestCm} onLimit={(reason) => showLimit("Chest", LIMITS.chestCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Chest") ? inputError : ""} />
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(0,134,109,0.06) 0%, transparent 60%)" label="Arms" unit="cm" latest={s.body[0]?.arms} value={mArms} onChange={setMArms} max={LIMITS.armsCm} onLimit={(reason) => showLimit("Arms", LIMITS.armsCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Arms") ? inputError : ""} />
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(0,134,109,0.06) 0%, transparent 60%)" label="Neck" unit="cm" latest={s.body[0]?.neck} value={mNeck} onChange={setMNeck} max={LIMITS.neckCm} onLimit={(reason) => showLimit("Neck", LIMITS.neckCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Neck") ? inputError : ""} />
+              </div>
+            </div>
+
+            <div>
+              <SectionTitle style={{ marginBottom: 12, paddingLeft: 4 }}>Torso & Core</SectionTitle>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(101,163,13,0.06) 0%, transparent 60%)" label="Waist" unit="cm" latest={s.body[0]?.waist} value={mWaist} onChange={setMWaist} max={LIMITS.waistCm} onLimit={(reason) => showLimit("Waist", LIMITS.waistCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Waist") ? inputError : ""} />
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(101,163,13,0.06) 0%, transparent 60%)" label="Hips" unit="cm" latest={s.body[0]?.hips} value={mHips} onChange={setMHips} max={LIMITS.hipsCm} onLimit={(reason) => showLimit("Hips", LIMITS.hipsCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Hips") ? inputError : ""} />
+              </div>
+            </div>
+
+            <div>
+              <SectionTitle style={{ marginBottom: 12, paddingLeft: 4 }}>Lower Body</SectionTitle>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(138,92,0,0.05) 0%, transparent 60%)" label="Thighs" unit="cm" latest={s.body[0]?.thighs} value={mThighs} onChange={setMThighs} max={LIMITS.thighsCm} onLimit={(reason) => showLimit("Thighs", LIMITS.thighsCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Thighs") ? inputError : ""} />
+                <MeasurementCard bgGradient="linear-gradient(135deg, rgba(138,92,0,0.05) 0%, transparent 60%)" label="Calves" unit="cm" latest={s.body[0]?.calves} value={mCalves} onChange={setMCalves} max={LIMITS.calvesCm} onLimit={(reason) => showLimit("Calves", LIMITS.calvesCm, "cm", reason, 1)} tone="var(--color-text-main)" error={inputError.startsWith("Calves") ? inputError : ""} />
+              </div>
+            </div>
           </div>
 
           <p style={{ textAlign: "center", color: "var(--color-text-muted)", fontSize: 13, fontStyle: "italic", marginTop: 32, padding: "0 20px" }}>
@@ -617,6 +737,18 @@ export default function ProfileSectionPage() {
         />
       )}
 
+      {section === "roadmap" && (
+        <LegalPage
+          title="Upcoming Features"
+          items={[
+            "Public Communities: Connect, share, and practice with others.",
+            "AI Assistant: Get personalized insights and guidance.",
+            "Steps Tracker: Connect to your phone's default health app.",
+            "Nutrition & Water Tracking: Comprehensive fuel monitoring.",
+          ]}
+        />
+      )}
+
       {section === "export" && (
         <section className="card">
           <SectionTitle>Export Data</SectionTitle>
@@ -648,9 +780,19 @@ export default function ProfileSectionPage() {
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <h2 className="uppercase-label" style={{ marginBottom: 10 }}>
+    <h2 style={{ 
+      fontSize: 13, 
+      fontWeight: 800, 
+      letterSpacing: "0.1em", 
+      textTransform: "uppercase",
+      marginBottom: 10,
+      background: "var(--grad-mint)",
+      WebkitBackgroundClip: "text",
+      WebkitTextFillColor: "transparent",
+      ...style
+    }}>
       {children}
     </h2>
   );
@@ -667,7 +809,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function MetricRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="row between" style={{ padding: "16px 0", borderBottom: "1px solid var(--color-surface-3)", gap: 12 }}>
+    <div className="row between" style={{ padding: "14px 16px", background: "var(--color-surface-1)", borderRadius: 12, marginBottom: 8, border: "1px solid rgba(115,253,156,0.08)", gap: 12 }}>
       <span className="text-caption" style={{ fontSize: 13 }}>{label}</span>
       <span style={{ fontSize: 14, fontWeight: 700, textAlign: "right", color: "var(--color-text-primary)" }}>{value}</span>
     </div>
@@ -682,6 +824,8 @@ function MeasurementCard({
   max,
   unit,
   onLimit,
+  bgGradient,
+  error,
 }: {
   label: string;
   latest?: number;
@@ -689,40 +833,46 @@ function MeasurementCard({
   onChange: (v: string) => void;
   max: number;
   unit: string;
-  onLimit: (reason: "max" | "negative") => void;
+  onLimit: (reason: "max" | "min" | "negative") => void;
   tone: string;
+  bgGradient?: string;
+  error?: string;
 }) {
   return (
-    <section className="card" style={{ padding: 16, marginBottom: 0 }}>
-      <div className="row between" style={{ marginBottom: 16, alignItems: "flex-start" }}>
+    <section className="card" style={{ padding: 14, marginBottom: 0, display: "flex", flexDirection: "column", gap: 12, position: "relative", overflow: "hidden" }}>
+      {bgGradient && <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: bgGradient, pointerEvents: "none" }} />}
+      <div className="row between" style={{ alignItems: "flex-start", position: "relative", zIndex: 1 }}>
         <div>
-          <h3 style={{ fontSize: 16, fontWeight: 700 }}>{label}</h3>
-          <p className="text-caption" style={{ marginTop: 4 }}>
-            Latest: <span style={{ marginLeft: 8 }}>{latest ? latest.toFixed(label === "Weight" ? 1 : 0) : "--"}</span>
+          <h3 style={{ fontSize: 15, fontWeight: 700 }}>{label}</h3>
+          <p className="text-caption" style={{ marginTop: 4, fontSize: 11 }}>
+            Latest: <span style={{ marginLeft: 4 }}>{latest ? latest.toFixed(label === "Weight" ? 1 : 0) : "--"}</span>
           </p>
         </div>
-        <div className="uppercase-label" style={{ fontSize: 11 }}>
+        <div className="uppercase-label" style={{ fontSize: 10, opacity: 0.7 }}>
           {unit}
         </div>
       </div>
       <input
+        className="input"
         type="number"
         value={value}
         placeholder="00.0"
         onChange={(e) => {
-          onChange(clampNumericInput(e.target.value, max, { decimal: true, onLimit }));
+          onChange(clampNumericInput(e.target.value, max, { decimal: true, min: 1, onLimit }));
         }}
         style={{
           width: "100%",
-          padding: "14px 16px",
-          borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.06)",
-          background: "var(--color-surface-2)",
+          padding: "10px 12px",
           color: "var(--color-mint-active)",
+          fontWeight: 700,
           fontSize: 16,
-          outline: "none",
+          textAlign: "center",
+          background: "var(--color-surface-1)",
+          position: "relative",
+          zIndex: 1
         }}
       />
+      {error && <div style={{ color: "var(--color-status-error)", fontSize: 11, marginTop: 4, textAlign: "center" }}>{error}</div>}
     </section>
   );
 }

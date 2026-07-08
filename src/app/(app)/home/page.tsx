@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { AppHeader } from "@/components/AppHeader";
 import { InstallAppCard } from "@/components/InstallAppCard";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
-import { IconArrowRight, IconTrend, IconJournal, IconBody, IconProgram } from "@/components/Icons";
+import { IconArrowRight } from "@/components/Icons";
+import { Footprints, FileChartLine, BookOpenText, ReceiptText } from "lucide-react";
+import { ROUTINE_PRESETS } from "@/lib/seed/routinePresets";
 
 const TRAIN_COLOR = "var(--color-train)";
 const YOGA_COLOR = "var(--color-yoga)";
@@ -38,14 +41,41 @@ const localDayKey = (date: Date | string) => {
 export default function HomePage() {
   const mounted = useMounted();
   const s = useStore();
+  const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [presetToAdd, setPresetToAdd] = useState<string | null>(null);
   const [rangeDays, setRangeDays] = useState<RangeDays>(15);
+  const progressScrollRef = useRef<HTMLDivElement>(null);
+  const activityScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    if (typeof window !== "undefined") {
+      const queryRange = new URLSearchParams(window.location.search).get("range");
+      if (queryRange === "7" || queryRange === "15" || queryRange === "30") {
+        setRangeDays(parseInt(queryRange, 10) as RangeDays);
+      }
     }
-  }, [mounted]);
+  }, []);
+
+  const handleSetRangeDays = (days: RangeDays) => {
+    setRangeDays(days);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("range", days.toString());
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted) return;
+    // Delay slightly to ensure children are fully rendered and laid out
+    const timer = setTimeout(() => {
+      if (progressScrollRef.current) progressScrollRef.current.scrollLeft = progressScrollRef.current.scrollWidth;
+      if (activityScrollRef.current) activityScrollRef.current.scrollLeft = activityScrollRef.current.scrollWidth;
+    }, 10);
+    return () => clearTimeout(timer);
+  }, [mounted, rangeDays, s.workouts.length, s.yoga.length, s.breath.length]);
 
   if (!mounted) return <div className="page" />;
 
@@ -81,7 +111,7 @@ export default function HomePage() {
     const d = localDayKey(b.date);
     breathCountByDay[d] = (breathCountByDay[d] || 0) + 1;
   });
-  const maxVal = Math.max(1, ...rangeKeys.map(d => Math.max(trainCountByDay[d] || 0, yogaCountByDay[d] || 0, breathCountByDay[d] || 0)));
+  const maxVal = Math.max(1, ...rangeKeys.map(d => (trainCountByDay[d] || 0) + (yogaCountByDay[d] || 0) + (breathCountByDay[d] || 0)));
   const hasGraphData = rangeKeys.some(d => (trainCountByDay[d] || 0) + (yogaCountByDay[d] || 0) + (breathCountByDay[d] || 0) > 0);
   const rangeTrain = rangeKeys.reduce((sum, d) => sum + (trainCountByDay[d] || 0), 0);
   const rangeYoga = rangeKeys.reduce((sum, d) => sum + (yogaCountByDay[d] || 0), 0);
@@ -107,7 +137,7 @@ export default function HomePage() {
       <div style={{ marginBottom: 20 }}>
         <InstallAppCard compact placement={`home:${s.profile.email || "guest"}`} />
       </div>
-      <RangeFilter value={rangeDays} onChange={setRangeDays} />
+      <RangeFilter value={rangeDays} onChange={handleSetRangeDays} />
 
       {/* Calendar View */}
       <div style={{ marginTop: 20, marginBottom: 28 }}>
@@ -116,7 +146,7 @@ export default function HomePage() {
           <div className="text-caption" style={{ textAlign: "right" }}>{rangeLabel}</div>
         </div>
         <div
-          ref={scrollRef}
+          ref={progressScrollRef}
           style={{
             display: "flex",
             gap: 8,
@@ -206,50 +236,52 @@ export default function HomePage() {
           <div style={{ marginBottom: 14 }}>
             <div className="text-caption">{rangeLabel} from your real logs</div>
           </div>
-          <div style={{ height: 178, position: "relative", overflowX: "auto", paddingBottom: 2 }}>
-            {[0, 1, 2].map((row) => (
-              <div
-                key={row}
-                aria-hidden
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  top: 12 + row * 46,
-                  height: 1,
-                  background: "rgba(134,148,135,0.16)",
-                }}
-              />
-            ))}
+          <div ref={activityScrollRef} style={{ height: 178, position: "relative", overflowX: "auto", paddingBottom: 2 }}>
             <div style={{ display: "flex", alignItems: "flex-end", height: 140, gap: 8, minWidth: Math.max(300, rangeDays * 34), position: "relative", zIndex: 1 }}>
               {rangeKeys.map((day) => {
                 const isToday = day === localDayKey(new Date());
                 return (
                   <div key={day} style={{ flex: 1, minWidth: 0, height: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 8 }}>
-                    <div style={{ flex: 1, display: "flex", alignItems: "flex-end", justifyContent: "center", gap: 3 }}>
-                      {barSeries.map((series, index) => {
-                        const count = series.counts[day] || 0;
-                        const height = count ? Math.max(16, (count / maxVal) * 112) : 4;
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", width: "100%", gap: 3 }}>
+                      {(() => {
+                        const total = (trainCountByDay[day] || 0) + (yogaCountByDay[day] || 0) + (breathCountByDay[day] || 0);
+                        const height = total ? Math.max(22, (total / maxVal) * 112) : 8;
                         const dateLabel = new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+                        
                         return (
                           <motion.div
-                            key={series.key}
                             initial={{ height: 0 }}
                             animate={{ height }}
-                            transition={{ duration: 0.45, ease: "easeOut", delay: index * 0.04 }}
-                            title={`${dateLabel}: ${count} ${series.label} ${count === 1 ? "session" : "sessions"}`}
-                            aria-label={`${dateLabel}: ${count} ${series.label} ${count === 1 ? "session" : "sessions"}`}
+                            transition={{ duration: 0.45, ease: "easeOut" }}
+                            title={`${dateLabel}: ${total} total sessions`}
                             style={{
-                              width: "28%",
-                              maxWidth: 14,
-                              minWidth: 6,
-                              borderRadius: "6px 6px 3px 3px",
-                              background: count ? series.color : "var(--color-surface-3)",
-                              boxShadow: count ? `0 0 14px ${series.color}33` : "none",
+                              width: "80%",
+                              maxWidth: 24,
+                              minWidth: 14,
+                              borderRadius: 8,
+                              overflow: "hidden",
+                              display: "flex",
+                              flexDirection: "column",
+                              justifyContent: "flex-end",
+                              background: "var(--color-surface-3)",
                             }}
-                          />
+                          >
+                            {total > 0 && [...barSeries].reverse().map((series) => {
+                              const count = series.counts[day] || 0;
+                              if (!count) return null;
+                              return (
+                                <div 
+                                  key={series.key} 
+                                  style={{ 
+                                    height: `${Math.max(12, (count / total) * 100)}%`, 
+                                    background: series.color 
+                                  }} 
+                                />
+                              );
+                            })}
+                          </motion.div>
                         );
-                      })}
+                      })()}
                     </div>
                     <div style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: isToday ? "var(--color-mint-active)" : "var(--color-text-muted)" }}>
                       {new Date(`${day}T12:00:00`).toLocaleDateString("en-US", { weekday: "narrow" })}
@@ -285,21 +317,18 @@ export default function HomePage() {
       <div style={{ marginBottom: 28 }}>
         <div className="row between" style={{ alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
           <h3 className="section-title" style={{ fontSize: 16, marginBottom: 0 }}>Weight Trend</h3>
-          <Link href="/body" className="text-caption" style={{ color: "var(--color-text-secondary)", fontWeight: 700 }}>
-            Log Weight
-          </Link>
         </div>
         <div className="clay" style={{ padding: "16px 16px 14px" }}>
           <div className="row between" style={{ alignItems: "flex-start", gap: 12, marginBottom: 14 }}>
             <div>
               <div className="text-caption">Latest result</div>
-              <div className="text-mono" style={{ fontSize: 28, fontWeight: 800, color: "var(--color-breathe)" }}>
+              <div className="text-mono" style={{ fontSize: 28, fontWeight: 800, color: "var(--color-seafoam-calm)" }}>
                 {latestWeight ? latestWeight.toFixed(1) : "-"}
                 <span style={{ fontSize: 13, color: "var(--color-text-muted)" }}> kg</span>
               </div>
             </div>
             {weightSeries.length > 1 && (
-              <div className="pill" style={{ color: weightChange <= 0 ? "var(--color-mint-active)" : "var(--color-breathe)" }}>
+              <div className="pill" style={{ color: weightChange <= 0 ? "var(--color-mint-active)" : "var(--color-seafoam-calm)" }}>
                 {weightChange === 0 ? "No change" : `${weightChange > 0 ? "+" : ""}${weightChange.toFixed(1)} kg`}
               </div>
             )}
@@ -319,13 +348,60 @@ export default function HomePage() {
 
       {/* Quick actions */}
       <h3 className="section-title" style={{ fontSize: 16, marginBottom: 12 }}>Tools & Insights</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <QuickAction href="/report" title="Detailed Report" desc="Monthly activity and progress" Icon={IconTrend} color="var(--color-seafoam-calm)" />
-        <QuickAction href="/library" title="Library" desc="Explore exercises and poses" Icon={IconProgram} color="var(--color-mint-active)" />
-        <QuickAction href="/logs" title="Exercise Logs" desc="View your completed routines" Icon={IconJournal} color="var(--color-train)" />
-        <QuickAction href="/body" title="Weight Logs" desc="Track weight and progress" Icon={IconBody} color="var(--color-breathe)" />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <QuickAction href="/report" title="Detailed Report" desc="Monthly activity and progress" Icon={FileChartLine} color="var(--color-mint-active)" />
+        <QuickAction href="/library" title="Library" desc="Explore exercises and poses" Icon={BookOpenText} color="var(--color-mint-active)" />
+        <QuickAction href="/logs" title="Exercise Logs" desc="View your completed routines" Icon={ReceiptText} color="var(--color-mint-active)" />
+        <QuickAction href="/body" title="Weight Logs" desc="Track weight and progress" Icon={Footprints} color="var(--color-mint-active)" />
       </div>
+
+      <h3 className="section-title" style={{ fontSize: 16, marginTop: 32, marginBottom: 12 }}>Routine Presets</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        {ROUTINE_PRESETS.map((preset) => (
+          <div
+            key={preset.id}
+            onClick={() => {
+              setPresetToAdd(preset.id);
+            }}
+            className="card card-interactive"
+            style={{
+              padding: 0,
+              position: "relative",
+              overflow: "hidden",
+              cursor: "pointer"
+            }}
+          >
+            {preset.image && (
+              <>
+                <div style={{ position: "absolute", top: 0, right: 0, width: "65%", height: "100%", backgroundImage: `url(${preset.image})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.35, pointerEvents: "none", WebkitMaskImage: "linear-gradient(to right, transparent, black 80%)", maskImage: "linear-gradient(to right, transparent, black 80%)" }} />
+                <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: `linear-gradient(135deg, color-mix(in srgb, ${preset.accent} 10%, transparent) 0%, transparent 70%)`, pointerEvents: "none" }} />
+              </>
+            )}
+            <div style={{ padding: 16, position: "relative", zIndex: 1, minHeight: 110, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <div style={{ marginBottom: 6 }}>
+                <span className="pill" style={{ color: preset.accent, borderColor: `color-mix(in srgb, ${preset.accent} 25%, transparent)`, background: `color-mix(in srgb, ${preset.accent} 8%, transparent)`, display: "inline-block" }}>{preset.category}</span>
+              </div>
+              <h4 style={{ fontSize: 16, fontWeight: 800, margin: "0 0 4px", color: "var(--color-text-primary)", letterSpacing: "-0.2px" }}>{preset.name}</h4>
+              
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div style={{ height: 100 }} />
+
+      {presetToAdd && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 100, background: "rgba(0,0,0,0.6)", display: "grid", placeItems: "center", padding: 20 }}>
+          <div className="card" style={{ width: "100%", maxWidth: 360, padding: 24, background: "var(--color-surface-main)", border: "1px solid var(--color-outline-main)", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8, color: "var(--color-text-primary)" }}>Add to Routine?</h3>
+            <p className="text-caption" style={{ marginBottom: 24, fontSize: 14 }}>Do you want to add this preset to your weekly routine?</p>
+            <div className="row gap-sm" style={{ justifyContent: "flex-end", alignItems: "center" }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setPresetToAdd(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => { router.push(`/routine?tab=presets&preset=${presetToAdd}`); setPresetToAdd(null); }}>Yes, Add it</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -382,9 +458,9 @@ function WeightTrendChart({ entries, compact = false }: { entries: { date: strin
           />
         ))}
         <path d={area} fill="rgba(143,212,255,0.12)" />
-        <path d={line} fill="none" stroke="var(--color-breathe)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d={line} fill="none" stroke="var(--color-mint-active)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
         {points.map(([x, y], index) => (
-          <circle key={`${entries[index].date}-${index}`} cx={x} cy={y} r={index === points.length - 1 ? 4 : 3} fill="var(--color-breathe)" />
+          <circle key={`${entries[index].date}-${index}`} cx={x} cy={y} r={index === points.length - 1 ? 4 : 3} fill="var(--color-mint-active)" />
         ))}
       </svg>
       {!compact && (
@@ -399,17 +475,20 @@ function WeightTrendChart({ entries, compact = false }: { entries: { date: strin
 }
 
 function QuickAction({ href, title, desc, Icon, color }: {
-  href: string; title: string; desc: string; Icon: React.FC<{ width?: number; height?: number }>; color: string;
+  href: string; title: string; desc: string; Icon: React.FC<{ width?: number; height?: number; strokeWidth?: number }>; color: string;
 }) {
   return (
-    <Link href={href} className="card card-interactive stack" style={{ padding: "18px 16px", minWidth: 0, justifyContent: "flex-start", gap: 8 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", display: "grid", placeItems: "center", color, flexShrink: 0, marginBottom: 4, boxShadow: "0 4px 12px rgba(0,0,0,0.15)" }}>
-        <Icon width={22} height={22} />
-      </div>
-      <div>
-        <div style={{ fontWeight: 600, fontSize: 16, letterSpacing: "-0.2px" }}>{title}</div>
-        <div className="text-caption" style={{ fontSize: 12, lineHeight: 1.4, marginTop: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-          {desc}
+    <Link href={href} className="card card-interactive stack" style={{ padding: "18px 16px", minWidth: 0, justifyContent: "flex-start", gap: 12, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", background: `linear-gradient(135deg, color-mix(in srgb, ${color} 8%, transparent) 0%, transparent 70%)`, pointerEvents: "none" }} />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: `color-mix(in srgb, ${color} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 15%, transparent)`, display: "grid", placeItems: "center", color, flexShrink: 0 }}>
+          <Icon width={22} height={22} strokeWidth={2} />
+        </div>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 16, letterSpacing: "-0.2px", color: "var(--color-text-primary)" }}>{title}</div>
+          <div className="text-caption" style={{ fontSize: 13, lineHeight: 1.4, marginTop: 3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            {desc}
+          </div>
         </div>
       </div>
     </Link>

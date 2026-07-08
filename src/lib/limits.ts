@@ -20,7 +20,7 @@ export const LIMITS = {
 export function clampNumericInput(
   raw: string,
   max: number,
-  options: { decimal?: boolean; onLimit?: (reason: "max" | "negative") => void } = {},
+  options: { min?: number; decimal?: boolean; onLimit?: (reason: "max" | "min" | "negative") => void } = {},
 ) {
   const hadMinus = raw.includes("-");
   const cleaned = raw.replace(options.decimal ? /[^\d.]/g : /\D/g, "");
@@ -34,6 +34,10 @@ export function clampNumericInput(
   if (parsed > max) {
     options.onLimit?.("max");
     return String(max);
+  }
+  if (options.min !== undefined && parsed < options.min) {
+    options.onLimit?.("min");
+    return String(options.min);
   }
   return normalized;
 }

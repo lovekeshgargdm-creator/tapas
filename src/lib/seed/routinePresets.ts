@@ -13,6 +13,7 @@ export interface RoutinePreset {
   days: DayOfWeek[];
   items: PresetItem[];
   accent: string;
+  image?: string;
 }
 
 export const ROUTINE_PRESETS: RoutinePreset[] = [
@@ -23,6 +24,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "No-machine strength staples for a simple home routine.",
     days: [0, 2, 4],
     accent: "#73fd9c",
+    image: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "exercise", name: "push up", sets: 3, reps: 10, restTimer: 45 },
       { type: "exercise", name: "squat", sets: 3, reps: 12, restTimer: 45 },
@@ -36,6 +38,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "Compact mobility and breathwork for hotel rooms or busy days.",
     days: [0, 1, 2, 3, 4, 5, 6],
     accent: "var(--color-breathe)",
+    image: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "asana", id: "uttanasana", duration: 40 },
       { type: "asana", id: "paschimottanasana", duration: 60 },
@@ -50,6 +53,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "Wake the body with strength, standing poses, and energizing breath.",
     days: [0, 1, 2, 3, 4],
     accent: "#fdb974",
+    image: "https://images.unsplash.com/photo-1445384763658-0400939829cd?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "exercise", name: "jumping jack", sets: 2, reps: 30, restTimer: 30 },
       { type: "asana", id: "utkatasana", duration: 40 },
@@ -64,6 +68,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "Slow poses and calming pranayam before bed.",
     days: [0, 1, 2, 3, 4, 5, 6],
     accent: "#bda8ff",
+    image: "https://images.unsplash.com/photo-1512314889357-e157c22f938d?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "asana", id: "balasana", duration: 90 },
       { type: "asana", id: "paschimottanasana", duration: 90 },
@@ -78,6 +83,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "Short reset for stiffness from sitting.",
     days: [0, 1, 2, 3, 4],
     accent: "#2ee5b5",
+    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "exercise", name: "neck side stretch", sets: 2, reps: 8, restTimer: 15 },
       { type: "asana", id: "uttanasana", duration: 45 },
@@ -92,6 +98,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "A gentle pranayam-only routine for daily consistency.",
     days: [0, 1, 2, 3, 4, 5, 6],
     accent: "var(--color-breathe)",
+    image: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "pranayama", id: "nadi-shodhana", duration: 240 },
       { type: "pranayama", id: "bhramari", duration: 180 },
@@ -105,6 +112,7 @@ export const ROUTINE_PRESETS: RoutinePreset[] = [
     description: "A balanced mix of training, poses, and breathwork.",
     days: [0, 2, 4, 5],
     accent: "#73fd9c",
+    image: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=600&q=60",
     items: [
       { type: "exercise", name: "push up", sets: 3, reps: 8, restTimer: 45 },
       { type: "exercise", name: "lunge", sets: 3, reps: 10, restTimer: 45 },

@@ -71,11 +71,11 @@ export default function Splash() {
           <p
             className="text-mono"
             style={{
-              marginTop: 10,
-              fontSize: 12.5,
-              letterSpacing: "0.32em",
+              marginTop: 12,
+              fontSize: 13,
+              letterSpacing: "0.24em",
               textTransform: "uppercase",
-              color: "var(--color-text-muted)",
+              color: "var(--color-text-secondary)",
             }}
           >
             Train · Yoga · Breathe
@@ -89,53 +89,33 @@ export default function Splash() {
               lineHeight: 1.55,
             }}
           >
-            TAPAS helps you build a daily practice by planning routines, logging workouts, tracking yoga, breathwork, and body progress in one place.
+            Plan routines, log workouts, and track your daily progress in one place.
           </p>
           <button
             className="btn btn-primary btn-lg"
-            style={{ marginTop: 24, minWidth: 180 }}
+            style={{ 
+              marginTop: 32, 
+              minWidth: 180,
+              boxShadow: "0 4px 16px rgba(74, 227, 141, 0.15)",
+              letterSpacing: "0.02em"
+            }}
             onClick={enterApp}
             disabled={!mounted || leaving}
           >
             Enter
           </button>
         </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55, duration: 0.5 }}
-          style={{ marginTop: 22, width: "min(360px, calc(100vw - 44px))" }}
-        >
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55, duration: 0.5 }}
+            style={{ marginTop: 40, width: "min(360px, calc(100vw - 44px))" }}
+          >
           <InstallAppCard compact placement="startup" />
         </motion.div>
       </motion.div>
 
-      {/* loading shimmer bar */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: leaving ? 0 : 1 }}
-        style={{
-          position: "absolute",
-          bottom: "14%",
-          width: 120,
-          height: 3,
-          borderRadius: 3,
-          overflow: "hidden",
-          background: "rgba(115,253,156,0.12)",
-          zIndex: 1,
-        }}
-      >
-        <motion.div
-          initial={{ x: "-100%" }}
-          animate={{ x: "100%" }}
-          transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            width: "60%",
-            height: "100%",
-            background: "linear-gradient(90deg,transparent,#73fd9c,transparent)",
-          }}
-        />
-      </motion.div>
+
     </main>
   );
 }

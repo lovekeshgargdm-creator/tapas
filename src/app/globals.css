@@ -28,7 +28,13 @@ html[data-theme="dark"] {
   /* ---- Module accents (Train / Yoga / Breathe) ---- */
   --color-train: #73fd9c;
   --color-yoga: #2ee5b5;
-  --color-breathe: #2ee5b5;
+  --color-breathe: #bef264;
+
+
+
+
+
+
 
   /* ---- Soft signal colors (warnings, errors, coaching cards) ---- */
   --color-warning-soft: #fdb974;
@@ -58,8 +64,8 @@ html[data-theme="dark"] {
 
   /* ---- Fonts ---- */
   --font-base: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: var(--font-jetbrains), "SF Mono", "Fira Code", monospace;
-  --font-sanskrit: var(--font-devanagari), var(--font-inter), sans-serif;
+  --font-mono: var(--font-base);
+  --font-sanskrit: var(--font-base);
 
   /* ---- Spacing ---- */
   --space-xs: 4px;
@@ -70,9 +76,9 @@ html[data-theme="dark"] {
 
   /* ---- Radius ---- */
   --radius-pill: 999px;
-  --radius-card: 8px;
-  --radius-button: 14px;
-  --radius-input: 10px;
+  --radius-card: 16px;
+  --radius-button: 16px;
+  --radius-input: 12px;
 
   /* ---- Gradients / glow ---- */
   --grad-breathe: linear-gradient(135deg, #2ee5b5, #73fd9c);
@@ -87,6 +93,13 @@ html[data-theme="dark"] {
 
   /* ---- Motion ---- */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --install-banner-border: rgba(115,253,156,0.25);
+  --install-banner-bg-start: rgba(115,253,156,0.08);
+  --install-banner-shadow: 0 0 20px rgba(115,253,156,0.08);
+  --install-banner-logo-bg: rgba(115,253,156,0.08);
+  --install-banner-logo-border: rgba(115,253,156,0.12);
+
+  --profile-card-bg: linear-gradient(135deg, var(--color-surface-2) 0%, var(--color-surface-3) 100%);
 
   color-scheme: dark;
 }
@@ -111,7 +124,13 @@ html[data-theme="light"] {
   /* ---- Module accents (Train / Yoga / Breathe) ---- */
   --color-train: #13b85e;
   --color-yoga: #00866d;
-  --color-breathe: #00866d;
+  --color-breathe: #65a30d;
+
+
+
+
+
+
 
   /* ---- Soft signal colors (warnings, errors, coaching cards) ---- */
   --color-warning-soft: #9b6500;
@@ -145,6 +164,14 @@ html[data-theme="light"] {
   --ambient-clear: rgba(247, 250, 244, 0);
   --ambient-bottom: rgba(247, 250, 244, 0.78);
   --header-frosted: rgba(255, 255, 255, 0.82);
+
+  --install-banner-border: rgba(19, 184, 94, 0.4);
+  --install-banner-bg-start: var(--color-surface-2);
+  --install-banner-shadow: 0 4px 12px rgba(0,0,0,0.04);
+  --install-banner-logo-bg: rgba(0,0,0,0.03);
+  --install-banner-logo-border: rgba(0,0,0,0.08);
+
+  --profile-card-bg: var(--color-surface-2);
 
   color-scheme: light;
 }
@@ -322,8 +349,8 @@ html[data-theme="light"] .glass {
   background: var(--color-surface-2);
   border-radius: var(--radius-card);
   padding: var(--space-lg);
-  box-shadow: none;
-  border: 1px solid rgba(61, 74, 62, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition: transform 0.2s var(--ease-standard), border-color 0.2s var(--ease-standard),
     background 0.2s var(--ease-standard), box-shadow 0.2s var(--ease-standard);
 }
@@ -339,9 +366,9 @@ html[data-theme="light"] .card {
   cursor: pointer;
 }
 .card-interactive:hover {
-  border-color: rgba(115, 253, 156, 0.34);
-  background: #1a211b;
-  box-shadow: inset 2px 2px 6px rgba(0, 0, 0, 0.22);
+  border-color: rgba(115, 253, 156, 0.25);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 html[data-theme="light"] .card-interactive:hover {
@@ -454,22 +481,29 @@ html[data-theme="light"] .icon-btn:hover {
 /* ===================== Inputs ===================== */
 .input {
   width: 100%;
-  background: var(--color-surface-2);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--color-text-primary);
   font-size: 16px; /* prevents iOS zoom */
   padding: 14px 16px;
-  border: 1px solid rgba(61, 74, 62, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-input);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 html[data-theme="light"] .input {
+  background: var(--color-surface-1);
   border-color: rgba(123, 151, 119, 0.42);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 .input:focus {
+  background: rgba(255, 255, 255, 0.06);
   border-color: var(--color-action-primary);
-  box-shadow: 0 0 12px rgba(46, 229, 181, 0.18);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 16px rgba(46, 229, 181, 0.2);
+}
+html[data-theme="light"] .input:focus {
+  background: #fff;
 }
 .input::placeholder {
   color: var(--color-text-muted);
@@ -717,4 +751,14 @@ html[data-theme="light"] [style*="rgba(255,255,255,0.05)"] {
   .page {
     padding-top: var(--space-xl);
   }
+}
+
+/* ===================== Light mode: select dropdowns ===================== */
+html[data-theme="light"] select.input {
+  background-color: var(--color-surface-1);
+  color: var(--color-text-primary);
+}
+html[data-theme="light"] select.input option {
+  background: #fff;
+  color: var(--color-text-primary);
 }

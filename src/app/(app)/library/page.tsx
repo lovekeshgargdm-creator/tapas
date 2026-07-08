@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchExerciseList, type ExerciseDbExercise } from "@/app/actions/exercise";
 import { fetchYogaPoseMediaMap, type YogaPoseMedia } from "@/app/actions/yoga";
-import { AppHeader } from "@/components/AppHeader";
+import { BackHeader } from "@/components/BackHeader";
 import { ASANAS, TECHNIQUES } from "@/lib/seed";
 import { uid, todayISO, useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
-import { IconSearch, IconDumbbell, IconYoga, IconPatterns, IconArrowRight, IconPlus, IconCheck } from "@/components/Icons";
+import { IconSearch, IconDumbbell, IconYoga, IconBreathe, IconArrowRight, IconPlus, IconCheck, IconChevron } from "@/components/Icons";
 import type { DayOfWeek, RoutineItem, WeeklyRoutine } from "@/lib/types";
 
 type TabKey = "train" | "yoga" | "breathe";
@@ -25,7 +25,7 @@ type RoutineCandidate = {
 const TABS: { id: TabKey; label: string; Icon: React.FC<{ width?: number; height?: number }> }[] = [
   { id: "train", label: "Train", Icon: IconDumbbell },
   { id: "yoga", label: "Yoga", Icon: IconYoga },
-  { id: "breathe", label: "Breathe", Icon: IconPatterns },
+  { id: "breathe", label: "Breathe", Icon: IconBreathe },
 ];
 const BODY_PARTS = ["all", "chest", "back", "shoulders", "biceps", "triceps", "abs", "quads", "hamstrings", "glutes", "calves", "forearms"];
 const EQUIPMENT_OPTIONS = ["all", "bodyweight", "dumbbell", "kettlebell", "barbell", "band", "cable", "machine", "no_machine"];
@@ -54,6 +54,7 @@ export default function LibraryPage() {
   const saveWeeklyRoutine = useStore((s) => s.saveWeeklyRoutine);
   const [tab, setTab] = useState<TabKey>("train");
   const [q, setQ] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [routineItem, setRoutineItem] = useState<RoutineCandidate | null>(null);
   const [selectedRoutineId, setSelectedRoutineId] = useState("");
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([todayRoutineDay()]);
@@ -75,6 +76,11 @@ export default function LibraryPage() {
     const next = params.get("tab");
     if (next === "train" || next === "yoga" || next === "breathe") setTab(next);
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQ(searchQuery), 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const switchTab = (next: TabKey) => {
     setTab(next);
@@ -172,7 +178,7 @@ export default function LibraryPage() {
 
   return (
     <div className="page" style={{ paddingBottom: 100 }}>
-      <AppHeader title="Library" subtitle="Train, yoga, and breathing" />
+      <BackHeader title="Library" subtitle="Train, yoga, and breathing" />
 
       {/* Tabs */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", background: "var(--color-surface-main)", borderRadius: 12, padding: 4, marginBottom: 18 }}>
@@ -205,7 +211,7 @@ export default function LibraryPage() {
       <div style={{ marginBottom: 16 }}>
         <div style={{ position: "relative" }}>
           <IconSearch width={18} height={18} style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
-          <input className="input input-with-icon" placeholder="Search library…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className="input input-with-icon" placeholder="Search library…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
         </div>
       </div>
 
@@ -237,7 +243,12 @@ export default function LibraryPage() {
           />
         ))}
         {tab === "train" && trainList.length === 0 && !trainLoading && (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--color-text-muted)" }}>No exercises found.</div>
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-surface-3)", display: "grid", placeItems: "center", margin: "0 auto 16px", color: "var(--color-text-muted)" }}>
+              <IconDumbbell width={24} height={24} />
+            </div>
+            <p className="text-caption" style={{ fontSize: 14 }}>Not found</p>
+          </div>
         )}
         {tab === "train" && trainLoading && (
           <div style={{ textAlign: "center", padding: 20, color: "var(--color-text-muted)" }}>Loading...</div>
@@ -262,7 +273,12 @@ export default function LibraryPage() {
           <div style={{ textAlign: "center", padding: 20, color: "var(--color-text-muted)" }}>Loading poses…</div>
         )}
         {tab === "yoga" && poseMediaLoaded && yogaList.length === 0 && (
-          <div style={{ textAlign: "center", padding: 40, color: "var(--color-text-muted)" }}>No poses found.</div>
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-surface-3)", display: "grid", placeItems: "center", margin: "0 auto 16px", color: "var(--color-text-muted)" }}>
+              <IconYoga width={24} height={24} />
+            </div>
+            <p className="text-caption" style={{ fontSize: 14 }}>Not found</p>
+          </div>
         )}
         {tab === "breathe" && breatheList.map(item => (
           <LibraryCard
@@ -270,11 +286,19 @@ export default function LibraryPage() {
             href={`/library/breathe/${encodeURIComponent(item.id)}`}
             title={item.name}
             subtitle={`${item.ratio.inhale}:${item.ratio.holdIn}:${item.ratio.exhale} ratio`}
-            icon={<IconPatterns width={20} height={20} />}
-            color="var(--color-breathe)"
+            icon={<IconBreathe width={20} height={20} />}
+            color="var(--color-train)"
             onAdd={() => openRoutineSheet({ kind: "pranayama", refId: item.id, name: item.name, duration: 300 })}
           />
         ))}
+        {tab === "breathe" && breatheList.length === 0 && (
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-surface-3)", display: "grid", placeItems: "center", margin: "0 auto 16px", color: "var(--color-text-muted)" }}>
+              <IconBreathe width={24} height={24} />
+            </div>
+            <p className="text-caption" style={{ fontSize: 14 }}>Not found</p>
+          </div>
+        )}
       </div>
       {routineItem && (
         <RoutineSheet
@@ -329,7 +353,11 @@ function LibraryCard({ href, title, subtitle, icon, color, image, onAdd }: { hre
       <Link href={href} style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, color: "inherit", textDecoration: "none", flex: 1 }}>
         {image ? (
           <div style={{ width: 54, height: 54, borderRadius: 12, background: "#fff", flexShrink: 0, overflow: "hidden", display: "grid", placeItems: "center" }}>
-            <img src={image} alt={title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            {/\.(mp4|webm|mov)(\?|$)/i.test(image) ? (
+              <video src={image} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            ) : (
+              <img src={image} alt={title} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            )}
           </div>
         ) : (
           <div style={{ width: 44, height: 44, borderRadius: 12, background: "var(--color-surface-main)", display: "grid", placeItems: "center", color, flexShrink: 0 }}>
@@ -400,14 +428,17 @@ function RoutineSheet({
             <h3 className="uppercase-label" style={{ marginBottom: 10 }}>Existing routine only</h3>
             {routines.length > 0 ? (
               <>
-                <select className="input" value={selectedRoutineId} onChange={(event) => setSelectedRoutineId(event.target.value)}>
-                  {routines.map((routine) => (
-                    <option key={routine.id} value={routine.id}>{routine.name}</option>
-                  ))}
-                </select>
+                <div style={{ position: "relative" }}>
+                  <select className="input" value={selectedRoutineId} onChange={(event) => setSelectedRoutineId(event.target.value)} style={{ appearance: "none", WebkitAppearance: "none", paddingRight: 40 }}>
+                    {routines.map((routine) => (
+                      <option key={routine.id} value={routine.id}>{routine.name}</option>
+                    ))}
+                  </select>
+                  <IconChevron width={16} height={16} style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%) rotate(90deg)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
+                </div>
                 <DayPicker selectedDays={selectedDays} setSelectedDays={setSelectedDays} />
-                <button className="btn btn-secondary btn-block" style={{ marginTop: 14 }} onClick={onAddExisting} disabled={!selectedRoutineId || selectedDays.length === 0}>
-                  Add to Routine
+                <button className="btn btn-primary btn-block" style={{ marginTop: 14 }} onClick={onAddExisting} disabled={!selectedRoutineId || selectedDays.length === 0}>
+                  <IconPlus width={16} height={16} /> Add to Routine
                 </button>
               </>
             ) : (

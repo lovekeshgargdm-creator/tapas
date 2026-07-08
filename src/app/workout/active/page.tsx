@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchExerciseById, fetchExerciseDetails, fetchExerciseList } from "@/app/actions/exercise";
 import { fetchYogaPoseMediaMap } from "@/app/actions/yoga";
 import { useStore, uid, todayISO } from "@/lib/store";
+import { useMounted } from "@/lib/useMounted";
 import { IconClose, IconPlus, IconCheck, IconTrend, IconTimer, IconPause, IconPlay, IconYoga, IconBreathe } from "@/components/Icons";
 import type { LoggedExercise, LoggedSet, RoutineItem } from "@/lib/types";
 
@@ -62,6 +63,7 @@ export default function ActiveWorkout() {
   const addYoga = useStore((s) => s.addYoga);
   const addBreath = useStore((s) => s.addBreath);
   const prevWorkouts = useStore((s) => s.workouts);
+  const mounted = useMounted();
 
   const [exercises, setExercises] = useState<ActiveExercise[]>([]);
   const [timedItems, setTimedItems] = useState<TimedRoutineItem[]>([]);
@@ -81,6 +83,7 @@ export default function ActiveWorkout() {
 
   // Build the session from draft (or a sensible default)
   useEffect(() => {
+    if (!mounted || exercises.length > 0 || timedItems.length > 0) return;
     let active = true;
     const loadDraft = async () => {
       if (typeof window !== "undefined") {
@@ -140,25 +143,11 @@ export default function ActiveWorkout() {
         }
       }
       if (draftRoutine) {
-        const routineExercises = await Promise.all(
-          draftRoutine.items
-            .filter((item) => item.type === "exercise")
-            .map(async (item) => {
-              const exercise = fromRoutineItem(item);
-              if (exercise.image) return exercise;
-              const details = await fetchExerciseById(item.refId);
-              if (!details?.gifUrl) return exercise;
-              return {
-                ...exercise,
-                image: details.gifUrl,
-                targetMuscles: exercise.targetMuscles || details.target,
-                equipment: exercise.equipment || details.equipment,
-              };
-            }),
-        );
-        const needsPoseMedia = draftRoutine.items.some((item) => item.type === "asana" && !item.image);
-        const poseMedia = needsPoseMedia ? await fetchYogaPoseMediaMap() : {};
-        const routineTimedItems = draftRoutine.items
+        const initialExercises = draftRoutine.items
+          .filter((item) => item.type === "exercise")
+          .map((item) => fromRoutineItem(item));
+
+        const initialTimedItems = draftRoutine.items
           .filter((item) => item.type === "asana" || item.type === "pranayama")
           .map((item) => {
             const duration = item.sets[0]?.duration || (item.type === "asana" ? 30 : 300);
@@ -167,15 +156,54 @@ export default function ActiveWorkout() {
               refId: item.refId,
               type: item.type,
               name: item.name,
-              image: item.image || (item.type === "asana" ? poseMedia[item.refId]?.image : undefined),
+              image: item.image,
               duration,
               remaining: duration,
               running: false,
               done: false,
             } as TimedRoutineItem;
           });
-        if (active) setExercises(routineExercises);
-        if (active) setTimedItems(routineTimedItems);
+
+        if (active) {
+          setExercises(initialExercises);
+          setTimedItems(initialTimedItems);
+        }
+
+        initialExercises.forEach((exercise) => {
+          if (!exercise.image) {
+            fetchExerciseById(exercise.exerciseId).then((details) => {
+              if (active && details?.gifUrl) {
+                setExercises((prev) =>
+                  prev.map((ex) =>
+                    ex.exerciseId === exercise.exerciseId && !ex.image
+                      ? {
+                          ...ex,
+                          image: details.gifUrl,
+                          targetMuscles: ex.targetMuscles || details.target,
+                          equipment: ex.equipment || details.equipment,
+                        }
+                      : ex
+                  )
+                );
+              }
+            });
+          }
+        });
+
+        const needsPoseMedia = draftRoutine.items.some((item) => item.type === "asana" && !item.image);
+        if (needsPoseMedia) {
+          fetchYogaPoseMediaMap().then((poseMedia) => {
+            if (active) {
+              setTimedItems((prev) =>
+                prev.map((item) =>
+                  item.type === "asana" && !item.image && poseMedia[item.refId]?.image
+                    ? { ...item, image: poseMedia[item.refId].image }
+                    : item
+                )
+              );
+            }
+          });
+        }
         return;
       }
       const ids = draft.length ? draft : DEFAULT_IDS;
@@ -198,8 +226,7 @@ export default function ActiveWorkout() {
     };
     loadDraft();
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [mounted, draft, draftRoutine, exercises.length, timedItems.length]);
 
   useEffect(() => {
     if (!sessionRunning) return;
@@ -314,7 +341,7 @@ export default function ActiveWorkout() {
         exercises: completed,
       });
     }
-    const completedAsanas = timedItems.filter((item) => item.type === "asana" && item.done);
+    const completedAsanas = timedItems.filter((item) => item.type === "asana" && (item.done || draftRoutine));
     if (completedAsanas.length > 0) {
       addYoga({
         id: uid(),
@@ -325,7 +352,7 @@ export default function ActiveWorkout() {
         posesCount: completedAsanas.length,
       });
     }
-    timedItems.filter((item) => item.type === "pranayama" && item.done).forEach((item) => {
+    timedItems.filter((item) => item.type === "pranayama" && (item.done || draftRoutine)).forEach((item) => {
       addBreath({
         id: uid(),
         date: todayISO(),
@@ -402,7 +429,6 @@ export default function ActiveWorkout() {
 
           {exercises.map((ex, ei) => (
             <motion.div key={ei} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ height: 3, background: "linear-gradient(90deg,#73fd9c,#2ee5b5)" }} />
               <div style={{ padding: 16 }}>
                 <Link
                   href={`/library/train/${encodeURIComponent(ex.exerciseId)}`}
@@ -419,7 +445,11 @@ export default function ActiveWorkout() {
                 >
                   {ex.image && (
                     <span style={{ width: 54, height: 54, borderRadius: 12, background: "#fff", overflow: "hidden", display: "grid", placeItems: "center" }}>
-                      <img src={ex.image} alt={ex.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      {/\.(mp4|webm|mov)(\?|$)/i.test(ex.image) ? (
+                        <video src={ex.image} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      ) : (
+                        <img src={ex.image} alt={ex.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                      )}
                     </span>
                   )}
                   <span style={{ minWidth: 0 }}>
@@ -523,7 +553,7 @@ export default function ActiveWorkout() {
       {/* Finish summary */}
       <AnimatePresence>
         {done && (
-          <Sheet onClose={() => setDone(false)} title="Workout complete">
+          <CenterModal onClose={() => setDone(false)} title="Workout complete">
             <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 150, damping: 12 }}
                 style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(115,253,156,0.14)", display: "grid", placeItems: "center", margin: "0 auto 16px", boxShadow: "var(--glow-mint)" }}>
@@ -534,9 +564,9 @@ export default function ActiveWorkout() {
                 <Metric label="Volume" value={`${volume.toLocaleString()}kg`} />
                 <Metric label="Done" value={`${completedExercises + completedTimedItems}`} />
               </div>
-              <button className="btn btn-primary btn-block btn-lg" onClick={finish} disabled={completedSets === 0 && completedTimedItems === 0}>Save to Home</button>
+              <button className="btn btn-primary btn-block btn-lg" onClick={finish} disabled={completedSets === 0 && completedTimedItems === 0}>Finish</button>
             </div>
-          </Sheet>
+          </CenterModal>
         )}
       </AnimatePresence>
     </main>
@@ -632,7 +662,7 @@ function TimedRoutineCard({
   const mm = String(Math.floor(item.remaining / 60)).padStart(2, "0");
   const ss = String(item.remaining % 60).padStart(2, "0");
   const progress = item.duration > 0 ? ((item.duration - item.remaining) / item.duration) * 100 : 100;
-  const color = item.type === "asana" ? "var(--color-yoga)" : "var(--color-breathe)";
+  const color = item.type === "asana" ? "var(--color-yoga)" : "var(--color-train)";
   const href = item.type === "asana" ? `/library/yoga/${encodeURIComponent(item.refId)}` : `/library/breathe/${encodeURIComponent(item.refId)}`;
 
   return (
@@ -726,7 +756,7 @@ function FloatingRestTimer({
             <div style={{ width: `${progress}%`, height: "100%", borderRadius: 999, background: "var(--color-mint-active)", transition: "width .25s ease" }} />
           </div>
         </div>
-        <div className="text-mono" style={{ fontSize: 24, fontWeight: 850, color: timer.remaining === 0 ? "var(--color-mint-active)" : "var(--color-breathe)", minWidth: 72, textAlign: "right" }}>
+        <div className="text-mono" style={{ fontSize: 24, fontWeight: 850, color: timer.remaining === 0 ? "var(--color-mint-active)" : "var(--color-train)", minWidth: 72, textAlign: "right" }}>
           {timer.remaining === 0 ? "Ready" : `${mm}:${ss}`}
         </div>
       </div>

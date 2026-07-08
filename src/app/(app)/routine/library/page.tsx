@@ -383,7 +383,7 @@ function SelectableLibraryRow({
   selected: boolean;
   onToggle: () => void;
 }) {
-  const color = item.type === "exercise" ? "var(--color-train)" : item.type === "asana" ? "var(--color-yoga)" : "var(--color-breathe)";
+  const color = item.type === "exercise" ? "var(--color-train)" : item.type === "asana" ? "var(--color-yoga)" : "var(--color-train)";
   return (
     <button
       className="card card-interactive"

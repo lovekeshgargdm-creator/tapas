@@ -4,7 +4,7 @@ export type Dosha = "vata" | "pitta" | "kapha";
 export type DoshaEffect = "increase" | "decrease" | "balance";
 export type Tier = "free" | "pro";
 export type ModuleKey = "move" | "yoga" | "breathe";
-export type Gender = "male" | "female" | "prefer_not_to_say";
+export type Gender = "male" | "female";
 export type HeightUnit = "cm" | "ft_in";
 export type WeightUnit = "kg" | "lbs";
 
@@ -162,6 +162,7 @@ export interface BodyMetric {
   id: string;
   date: string;
   weight?: number;
+  bodyFat?: number;
   waist?: number;
   chest?: number;
   hips?: number;
@@ -264,6 +265,7 @@ export interface JournalEntry {
 export interface UserProfile {
   name: string;
   email: string;
+  avatarUrl?: string;
   doshaScores: Record<Dosha, number>;
   doshaPrimary: Dosha | "tridoshic" | null;
   goals: string[];

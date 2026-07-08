@@ -115,22 +115,43 @@ function ExerciseDetail({ item }: { item: ExerciseDbExercise }) {
               position: "relative",
             }}
           >
-            {frames.map((src, index) => (
-              <img
-                key={src}
-                src={src}
-                alt={item.name}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                  opacity: index === frame ? 1 : 0,
-                  transition: "opacity .35s ease",
-                }}
-              />
-            ))}
+            {frames.map((src, index) => {
+              const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(src);
+              return isVideo ? (
+                <video
+                  key={src}
+                  src={src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    opacity: index === frame ? 1 : 0,
+                    transition: "opacity .35s ease",
+                  }}
+                />
+              ) : (
+                <img
+                  key={src}
+                  src={src}
+                  alt={item.name}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    opacity: index === frame ? 1 : 0,
+                    transition: "opacity .35s ease",
+                  }}
+                />
+              );
+            })}
           </div>
         ) : (
           <div style={{ height: 160, display: "grid", placeItems: "center", color: "var(--color-mint-active)" }}>
@@ -356,7 +377,7 @@ function BreathDetail({ technique }: { technique: PranayamaTechnique }) {
           title={technique.name}
           subtitle={`Ratio ${ratio}`}
           seconds={duration * 60}
-          tone="var(--color-breathe)"
+          tone="var(--color-train)"
           icon={<IconPatterns width={48} height={48} />}
           onClose={() => setTrying(false)}
         />

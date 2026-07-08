@@ -10,11 +10,11 @@ import { useStore } from "@/lib/store";
 import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { DOSHA_QUIZ, DOSHA_INFO } from "@/lib/seed";
 import type { Dosha, Gender, HeightUnit, WeightUnit } from "@/lib/types";
-import { IconArrowRight, IconCheck, IconSparkle, IconTrain, IconYoga, IconBreathe, IconFlame } from "@/components/Icons";
+import { IconArrowRight, IconCheck, IconCircleCheckBig, IconDumbbell, IconLeaf, IconBreathe, IconFlame } from "@/components/Icons";
 
 const GOALS = [
-  { id: "strength", label: "Get stronger", icon: IconTrain },
-  { id: "flexible", label: "Get more flexible", icon: IconYoga },
+  { id: "strength", label: "Get stronger", icon: IconDumbbell },
+  { id: "flexible", label: "Get more flexible", icon: IconLeaf },
   { id: "stress", label: "Reduce stress & breathe better", icon: IconBreathe },
   { id: "consistency", label: "Build consistency", icon: IconFlame },
 ];
@@ -129,12 +129,11 @@ export default function Onboarding() {
     router.replace("/home");
   };
 
-  const showLimit = (label: string, max: number, unit = "", reason: "max" | "negative" = "max") => {
-    setInputError(
-      reason === "negative"
-        ? `${label} cannot be negative.`
-        : `${label} cannot be more than ${max}${unit ? ` ${unit}` : ""}.`,
-    );
+  const showLimit = (label: string, max: number, unit = "", reason: "max" | "min" | "negative" = "max", min = 1) => {
+    if (reason === "negative") setInputError(`${label} cannot be negative.`);
+    else if (reason === "min") setInputError(`${label} cannot be less than ${min} ${unit}.`.trim());
+    else setInputError(`${label} cannot be more than ${max} ${unit}.`.trim());
+    setTimeout(() => setInputError(""), 3000);
   };
 
   const currentStepIndex = STEPS_ORDER.indexOf(step);
@@ -145,19 +144,30 @@ export default function Onboarding() {
       <Ambient dim />
       <div style={frame}>
         {/* progress dots */}
-        <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 8, zIndex: 1 }}>
-          {VISIBLE_STEPS.map((s) => (
-            <span
-              key={s}
-              style={{
-                width: step === s ? 22 : 7,
-                height: 7,
-                borderRadius: 6,
-                background: step === s ? "var(--color-mint-active)" : "var(--color-surface-3)",
-                transition: "all .3s",
-              }}
-            />
-          ))}
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 36, zIndex: 1 }}>
+          <div style={{
+            display: "flex", 
+            gap: 6, 
+            padding: "8px 10px", 
+            background: "rgba(18, 28, 24, 0.5)",
+            border: "1px solid rgba(74, 227, 141, 0.1)",
+            borderRadius: 999,
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)"
+          }}>
+            {VISIBLE_STEPS.map((s) => (
+              <span
+                key={s}
+                style={{
+                  width: step === s ? 24 : 6,
+                  height: 6,
+                  borderRadius: 6,
+                  background: step === s ? "var(--color-mint-active)" : "rgba(255, 255, 255, 0.15)",
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              />
+            ))}
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
@@ -173,8 +183,7 @@ export default function Onboarding() {
               </div>
               <h1 style={h1}>Hi{name ? `, ${name}` : " there"}</h1>
               <p style={sub}>
-                TAPAS learns your constitution to personalise your yoga and movement practice.
-                Take a quick 8-question check-in — or skip and explore.
+                Take a quick 8-question check-in to personalise your practice, or skip to explore.
               </p>
               <div className="stack gap-sm" style={{ marginTop: 26 }}>
                 <button className="btn btn-primary btn-block btn-lg" onClick={() => setStep("quiz")}>
@@ -224,7 +233,7 @@ export default function Onboarding() {
           {step === "goals" && (
             <Slide key="goals">
               <h2 style={h1}>What matters most right now?</h2>
-              <p style={sub}>Pick any that apply — we&apos;ll shape your plan around them.</p>
+              <p style={sub}>Pick any that apply.</p>
               <div className="stack gap-sm" style={{ marginTop: 22 }}>
                 {GOALS.map((g) => {
                   const on = goals.includes(g.id);
@@ -278,16 +287,18 @@ export default function Onboarding() {
                     value={age}
                     min="10"
                     max={LIMITS.age}
-                    onChange={(e) => setAge(clampNumericInput(e.target.value, LIMITS.age, { onLimit: (reason) => showLimit("Age", LIMITS.age, "", reason) }))}
+                    onChange={(e) => setAge(clampNumericInput(e.target.value, LIMITS.age, { min: 1, onLimit: (reason) => showLimit("Age", LIMITS.age, "", reason, 1) }))}
                     style={{ marginTop: 6 }}
                   />
                 </div>
 
                 {/* Gender */}
                 <div>
-                  <label style={labelStyle}>Gender</label>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 6 }}>
-                    {(["male", "female", "prefer_not_to_say"] as const).map((g) => (
+                  <label style={labelStyle}>
+                    Biological Sex <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>(for workout calibration)</span>
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 6 }}>
+                    {(["male", "female"] as const).map((g) => (
                       <button
                         key={g}
                         onClick={() => setGender(g)}
@@ -302,7 +313,7 @@ export default function Onboarding() {
                           transition: "all .2s",
                         }}
                       >
-                        {g === "prefer_not_to_say" ? "Prefer not" : g.charAt(0).toUpperCase() + g.slice(1)}
+                        {g.charAt(0).toUpperCase() + g.slice(1)}
                       </button>
                     ))}
                   </div>
@@ -338,7 +349,7 @@ export default function Onboarding() {
                       value={heightCm}
                       min="50"
                       max={LIMITS.heightCm}
-                      onChange={(e) => setHeightCm(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, onLimit: (reason) => showLimit("Height", LIMITS.heightCm, "cm", reason) }))}
+                      onChange={(e) => setHeightCm(clampNumericInput(e.target.value, LIMITS.heightCm, { decimal: true, min: 1, onLimit: (reason) => showLimit("Height", LIMITS.heightCm, "cm", reason, 1) }))}
                     />
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
@@ -350,7 +361,7 @@ export default function Onboarding() {
                         value={heightFt}
                         min="1"
                         max={LIMITS.heightFt}
-                        onChange={(e) => setHeightFt(clampNumericInput(e.target.value, LIMITS.heightFt, { onLimit: (reason) => showLimit("Height", LIMITS.heightFt, "ft", reason) }))}
+                        onChange={(e) => setHeightFt(clampNumericInput(e.target.value, LIMITS.heightFt, { min: 1, onLimit: (reason) => showLimit("Height", LIMITS.heightFt, "ft", reason, 1) }))}
                       />
                       <input
                         className="input"
@@ -400,7 +411,7 @@ export default function Onboarding() {
                       const val = clampNumericInput(
                         e.target.value,
                         max,
-                        { decimal: true, onLimit: (reason) => showLimit("Weight", max, weightUnit, reason) },
+                        { decimal: true, min: 1, onLimit: (reason) => showLimit("Weight", max, weightUnit, reason, 1) },
                       );
                       if (weightUnit === "kg") setWeightKg(val);
                       else setWeightLbs(val);
@@ -420,14 +431,33 @@ export default function Onboarding() {
 
           {step === "ready" && (
             <Slide key="ready">
-              <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "center", marginBottom: 24, marginTop: 12 }}>
                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 140, damping: 12 }}>
-                  <div style={{ width: 96, height: 96, borderRadius: "50%", background: "rgba(115,253,156,0.12)", display: "grid", placeItems: "center", boxShadow: "var(--glow-mint)" }}>
-                    <IconSparkle width={44} height={44} style={{ color: "var(--color-mint-active)" }} />
-                  </div>
+                  <motion.div 
+                    animate={{ 
+                      scale: [1, 1.04, 1], 
+                      boxShadow: [
+                        "0 0 15px rgba(115,253,156,0.05), inset 0 0 10px rgba(115,253,156,0.02)", 
+                        "0 0 25px rgba(115,253,156,0.2), inset 0 0 20px rgba(115,253,156,0.08)", 
+                        "0 0 15px rgba(115,253,156,0.05), inset 0 0 10px rgba(115,253,156,0.02)"
+                      ] 
+                    }}
+                    transition={{ repeat: Infinity, duration: 2.5, ease: "easeInOut" }}
+                    style={{ 
+                      width: 104, height: 104, 
+                      borderRadius: "50%", 
+                      background: "linear-gradient(135deg, rgba(115,253,156,0.08) 0%, rgba(115,253,156,0.01) 100%)", 
+                      display: "grid", placeItems: "center",
+                      border: "1px solid rgba(115,253,156,0.15)",
+                      backdropFilter: "blur(12px)",
+                      WebkitBackdropFilter: "blur(12px)",
+                    }}
+                  >
+                    <IconCircleCheckBig width={50} height={50} style={{ color: "var(--color-mint-active)", filter: "drop-shadow(0 0 6px rgba(115,253,156,0.4))" }} />
+                  </motion.div>
                 </motion.div>
               </div>
-              <h1 style={h1}>You&apos;re all set! ✨</h1>
+              <h1 style={h1}>You&apos;re all set!</h1>
               <p style={sub}>
                 Your personalised dashboard is ready. Start exploring your yoga, movement, and practice tracker.
               </p>

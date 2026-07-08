@@ -14,6 +14,7 @@ import {
   IconArrowRight,
   IconEdit,
   IconFileText,
+  IconHistory,
   IconInstall,
   IconRuler,
 } from "@/components/Icons";
@@ -22,6 +23,7 @@ const PROFILE_LINKS = [
   { href: "/profile/personal", label: "Personal Details", Icon: IconEdit },
   { href: "/profile/measurements", label: "Measurements", Icon: IconRuler },
   { href: "/profile/activity", label: "Account Activity", Icon: IconActivity },
+  { href: "/profile/roadmap", label: "Future Pipeline", Icon: IconHistory },
 ];
 
 export default function ProfilePage() {
@@ -67,7 +69,13 @@ export default function ProfilePage() {
             flexShrink: 0,
           }}
         >
-          <Logo size={54} />
+          {s.profile.avatarUrl ? (
+            <img src={s.profile.avatarUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ fontSize: 24, fontWeight: 800, color: "var(--color-mint-active)" }}>
+              {s.profile.name ? s.profile.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : "U"}
+            </span>
+          )}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0 }}>
@@ -102,7 +110,13 @@ export default function ProfilePage() {
         <div style={{ width: "100%" }}>
           <InstallAppCard placement={`profile:${s.profile.email || "guest"}`} />
         </div>
-        <button className="btn btn-secondary" style={{ width: "min(220px, 100%)" }} onClick={logout}>
+        <button 
+          className="btn btn-secondary" 
+          style={{ width: "min(220px, 100%)", transition: "all 0.2s" }} 
+          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-status-error, #ef4444)"; e.currentTarget.style.borderColor = "var(--color-status-error, #ef4444)"; e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = ""; e.currentTarget.style.borderColor = ""; e.currentTarget.style.background = ""; }}
+          onClick={logout}
+        >
           Sign out
         </button>
         <div style={{ textAlign: "center" }}>
@@ -111,11 +125,11 @@ export default function ProfilePage() {
           </p>
           <p className="text-caption">© 2026 TAPAS. All rights reserved</p>
           <div className="row center gap-sm" style={{ marginTop: 12, color: "var(--color-text-muted)" }}>
-            <Link className="text-caption" href="/profile/privacy">
+            <Link className="text-caption" href="/profile/privacy" style={{ textDecoration: "underline" }}>
               Privacy Policy
             </Link>
             <span className="text-caption">|</span>
-            <Link className="text-caption" href="/profile/terms">
+            <Link className="text-caption" href="/profile/terms" style={{ textDecoration: "underline" }}>
               Terms & Conditions
             </Link>
           </div>

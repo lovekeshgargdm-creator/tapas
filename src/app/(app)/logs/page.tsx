@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { BackHeader } from "@/components/BackHeader";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
-import { IconTrash, IconTimer, IconDumbbell } from "@/components/Icons";
+import { IconTrash, IconTimer, IconDumbbell, IconActivity } from "@/components/Icons";
 
 type RangeDays = 7 | 15 | 30;
 
@@ -21,6 +22,42 @@ export default function LogsPage() {
   const deleteWorkout = useStore((s) => s.deleteWorkout);
   const [rangeDays, setRangeDays] = useState<RangeDays>(15);
   const [specificDate, setSpecificDate] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryRange = urlParams.get("range");
+      if (queryRange === "7" || queryRange === "15" || queryRange === "30") {
+        setRangeDays(parseInt(queryRange, 10) as RangeDays);
+      }
+      const queryDate = urlParams.get("date");
+      if (queryDate) {
+        setSpecificDate(queryDate);
+      }
+    }
+  }, []);
+
+  const handleSetRangeDays = (days: RangeDays) => {
+    setRangeDays(days);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("range", days.toString());
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
+
+  const handleSetSpecificDate = (date: string) => {
+    setSpecificDate(date);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (date) {
+        url.searchParams.set("date", date);
+      } else {
+        url.searchParams.delete("date");
+      }
+      window.history.replaceState(null, "", url.toString());
+    }
+  };
 
   if (!mounted) return <div className="page" />;
 
@@ -57,7 +94,7 @@ export default function LogsPage() {
               type="date" 
               className="input" 
               value={specificDate} 
-              onChange={(e) => setSpecificDate(e.target.value)}
+              onChange={(e) => handleSetSpecificDate(e.target.value)}
               style={{ 
                 display: "block",
                 width: "100%", 
@@ -80,8 +117,8 @@ export default function LogsPage() {
               key={option.value}
               className={`chip ${!specificDate && rangeDays === option.value ? "active" : ""}`}
               onClick={() => {
-                setSpecificDate("");
-                setRangeDays(option.value);
+                handleSetSpecificDate("");
+                handleSetRangeDays(option.value);
               }}
               style={{ justifyContent: "center", minHeight: 44, paddingInline: 8 }}
             >
@@ -93,9 +130,14 @@ export default function LogsPage() {
 
       <div className="stack gap-sm" style={{ paddingBottom: 100 }}>
         {filteredWorkouts.length === 0 ? (
-          <div style={{ padding: "40px 20px", textAlign: "center", color: "var(--color-text-muted)" }}>
-            <div style={{ fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: 4 }}>No completed routines.</div>
-            <div className="text-caption">Complete a workout to see your logs here.</div>
+          <div className="card" style={{ padding: "40px 20px", textAlign: "center", color: "var(--color-text-muted)" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", background: "var(--color-surface-3)", display: "grid", placeItems: "center", margin: "0 auto 16px", color: "var(--color-text-muted)" }}>
+              <IconActivity width={24} height={24} />
+            </div>
+            <p className="text-caption" style={{ fontSize: 14, marginBottom: 20 }}>Not found</p>
+            <Link href="/report" className="btn btn-primary" style={{ display: "inline-flex" }}>
+              View full report
+            </Link>
           </div>
         ) : (
           filteredWorkouts.map((w) => {

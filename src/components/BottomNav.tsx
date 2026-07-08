@@ -34,7 +34,7 @@ export function BottomNav() {
                 gap: 2,
                 padding: "6px 8px",
                 borderRadius: 999,
-                color: active ? "var(--color-mint-active)" : "var(--color-text-muted)",
+                color: active ? "var(--color-mint-active)" : "var(--color-text-secondary)",
                 background: "transparent",
                 transition: "color .15s ease, background .15s ease, transform .15s ease",
                 minWidth: 56,
@@ -88,7 +88,7 @@ const navStyle: React.CSSProperties = {
   justifyContent: "space-around",
   alignItems: "center",
   padding: "8px 12px",
-  border: "1px solid rgba(255,255,255,0.05)",
   borderRadius: 999,
   zIndex: 100,
+  boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
 };
