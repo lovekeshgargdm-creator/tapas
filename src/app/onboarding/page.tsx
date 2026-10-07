@@ -540,7 +540,7 @@ function LimitNotice({ message }: { message: string }) {
 }
 
 const mainStyle: React.CSSProperties = {
-  minHeight: "100dvh",
+  minHeight: "100vh",
   position: "relative",
   overflow: "hidden",
   display: "flex",

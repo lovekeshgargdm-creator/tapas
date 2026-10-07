@@ -123,6 +123,15 @@ export interface LoggedExercise {
   sets: LoggedSet[];
 }
 
+export interface LoggedTimedItem {
+  id: string;
+  refId: string;
+  type: "asana" | "pranayama";
+  name: string;
+  image?: string;
+  duration: number; // completed duration in seconds
+}
+
 export interface WorkoutLog {
   id: string;
   date: string; // ISO date
@@ -131,6 +140,7 @@ export interface WorkoutLog {
   rpe?: number;
   notes?: string;
   exercises: LoggedExercise[];
+  timedItems?: LoggedTimedItem[];
   volume: number;
 }
 
@@ -157,6 +167,20 @@ export interface BreathSession {
   completed: boolean;
 }
 
+
+export type FastingProtocol = "16:8" | "18:6" | "20:4" | "5:2" | "OMAD" | "custom";
+
+export interface FastingSession {
+  id: string;
+  date: string;          // ISO start time
+  protocol: FastingProtocol;
+  targetHours: number;   // planned fasting duration
+  actualHours?: number;  // completed duration (filled on end)
+  startedAt: string;     // ISO timestamp
+  endedAt?: string;      // ISO timestamp (undefined = still active)
+  completed: boolean;
+  notes?: string;
+}
 
 export interface BodyMetric {
   id: string;

@@ -1,5 +1,3 @@
-import Image from "next/image";
-
 interface LogoProps {
   size?: number;
   withGlow?: boolean;
@@ -8,6 +6,7 @@ interface LogoProps {
 export function Logo({ size = 64, withGlow = false }: LogoProps) {
   return (
     <div
+      suppressHydrationWarning
       style={{
         width: size,
         height: size,
@@ -16,10 +15,12 @@ export function Logo({ size = 64, withGlow = false }: LogoProps) {
         justifyContent: "center",
         borderRadius: "22%",
         overflow: "hidden",
+        flexShrink: 0,
         boxShadow: withGlow ? "0 0 18px rgba(115,253,156,0.45)" : undefined,
       }}
     >
-      <Image
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
         src="/icons/tapas-logo.png"
         alt="TAPAS Logo"
         width={size}

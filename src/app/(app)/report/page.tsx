@@ -33,7 +33,11 @@ const formatDuration = (minutes: number) => {
 
 export default function ReportPage() {
   const mounted = useMounted();
-  const s = useStore();
+  const workouts = useStore((s) => s.workouts);
+  const yoga = useStore((s) => s.yoga);
+  const breath = useStore((s) => s.breath);
+  const body = useStore((s) => s.body);
+  const accountLogs = useStore((s) => s.accountLogs);
   
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
   const initialRange = searchParams ? (parseInt(searchParams.get("range") || "30", 10) as RangeDays) : 30;
@@ -64,26 +68,26 @@ export default function ReportPage() {
     const yogaMinutesByDay: Record<string, number> = {};
     const breathMinutesByDay: Record<string, number> = {};
 
-    s.workouts.forEach((workout) => {
+    workouts.forEach((workout) => {
       const key = localDayKey(workout.date);
       trainByDay[key] = (trainByDay[key] || 0) + 1;
       trainMinutesByDay[key] = (trainMinutesByDay[key] || 0) + workout.durationMin;
     });
-    s.yoga.forEach((session) => {
+    yoga.forEach((session) => {
       const key = localDayKey(session.date);
       yogaByDay[key] = (yogaByDay[key] || 0) + 1;
       yogaMinutesByDay[key] = (yogaMinutesByDay[key] || 0) + session.durationMin;
     });
-    s.breath.filter((session) => session.completed).forEach((session) => {
+    breath.filter((session) => session.completed).forEach((session) => {
       const key = localDayKey(session.date);
       breathByDay[key] = (breathByDay[key] || 0) + 1;
       breathMinutesByDay[key] = (breathMinutesByDay[key] || 0) + Math.round(session.durationSec / 60);
     });
 
-    const rangeWorkouts = s.workouts.filter((item) => daySet.has(localDayKey(item.date)));
-    const rangeYoga = s.yoga.filter((item) => daySet.has(localDayKey(item.date)));
-    const rangeBreath = s.breath.filter((item) => item.completed && daySet.has(localDayKey(item.date)));
-    const rangeWeights = s.body
+    const rangeWorkouts = workouts.filter((item) => daySet.has(localDayKey(item.date)));
+    const rangeYoga = yoga.filter((item) => daySet.has(localDayKey(item.date)));
+    const rangeBreath = breath.filter((item) => item.completed && daySet.has(localDayKey(item.date)));
+    const rangeWeights = body
       .filter((entry) => daySet.has(localDayKey(entry.date)) && typeof entry.weight === "number" && entry.weight > 0)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -96,11 +100,11 @@ export default function ReportPage() {
     const weights = rangeWeights.map((entry) => entry.weight || 0);
     const weightChange = weights.length > 1 ? weights[weights.length - 1] - weights[0] : 0;
     const allDates = [
-      ...s.accountLogs.map((item) => item.date),
-      ...s.workouts.map((item) => item.date),
-      ...s.yoga.map((item) => item.date),
-      ...s.breath.map((item) => item.date),
-      ...s.body.map((item) => item.date),
+      ...accountLogs.map((item) => item.date),
+      ...workouts.map((item) => item.date),
+      ...yoga.map((item) => item.date),
+      ...breath.map((item) => item.date),
+      ...body.map((item) => item.date),
     ].filter(Boolean);
     const accountStart = allDates.length
       ? new Date(Math.min(...allDates.map((date) => new Date(date).getTime())))
@@ -132,7 +136,7 @@ export default function ReportPage() {
       monthReports,
       noData: totalSessions === 0 && rangeWeights.length === 0,
     };
-  }, [s, rangeDays]);
+  }, [rangeDays, workouts, yoga, breath, body, accountLogs]);
 
   if (!mounted) return <div className="page" />;
 

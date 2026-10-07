@@ -8,7 +8,8 @@ import { fetchExerciseById, fetchExerciseDetails, fetchExerciseList } from "@/ap
 import { fetchYogaPoseMediaMap } from "@/app/actions/yoga";
 import { useStore, uid, todayISO } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
-import { IconClose, IconPlus, IconCheck, IconTrend, IconTimer, IconPause, IconPlay, IconYoga, IconBreathe } from "@/components/Icons";
+import { IconClose, IconPlus, IconCheck, IconTrend, IconTimer, IconPause, IconPlay, IconYoga, IconBreathe, IconDumbbell, IconRepeat, IconMove, IconTrash, IconSearch } from "@/components/Icons";
+import { ASANAS, TECHNIQUES } from "@/lib/seed";
 import type { LoggedExercise, LoggedSet, RoutineItem } from "@/lib/types";
 
 const DEFAULT_IDS = ["push up", "plank"];
@@ -25,6 +26,27 @@ type TimedRoutineItem = {
   remaining: number;
   running: boolean;
   done: boolean;
+};
+
+type PickerTab = "exercise" | "asana" | "pranayama";
+const TABS: { id: PickerTab; label: string; Icon: React.FC<{ width?: number; height?: number }> }[] = [
+  { id: "exercise", label: "Train", Icon: IconDumbbell },
+  { id: "asana", label: "Yoga", Icon: IconYoga },
+  { id: "pranayama", label: "Breathe", Icon: IconBreathe },
+];
+
+const BODY_PARTS = ["all", "chest", "back", "shoulders", "biceps", "triceps", "abs", "quads", "hamstrings", "glutes", "calves", "forearms"];
+const EQUIPMENT_OPTIONS = ["all", "bodyweight", "dumbbell", "kettlebell", "barbell", "band", "cable", "machine", "no_machine"];
+const EQUIPMENT_LABELS: Record<string, string> = {
+  all: "All equipment",
+  bodyweight: "Bodyweight",
+  dumbbell: "Dumbbell",
+  kettlebell: "Kettlebell",
+  barbell: "Barbell",
+  band: "Resistance band",
+  cable: "Cable",
+  machine: "Machine",
+  no_machine: "No machines",
 };
 
 const usesExternalWeight = (equipment?: string, name?: string) => {
@@ -80,6 +102,7 @@ export default function ActiveWorkout() {
     running: boolean;
     label: string;
   } | null>(null);
+  const [limitErrors, setLimitErrors] = useState<Record<number, string>>({});
 
   // Build the session from draft (or a sensible default)
   useEffect(() => {
@@ -273,6 +296,27 @@ export default function ActiveWorkout() {
   }, [exercises, prevWorkouts]);
 
   const update = (ei: number, si: number, patch: Partial<LoggedSet>) => {
+    let error = "";
+    if (patch.weight !== undefined && patch.weight > 500) {
+      patch.weight = 500;
+      error = "Weight cannot be more than 500 kg.";
+    }
+    if (patch.reps !== undefined && patch.reps > 100) {
+      patch.reps = 100;
+      error = "Reps cannot be more than 100.";
+    }
+
+    if (error) {
+      setLimitErrors((prev) => ({ ...prev, [ei]: error }));
+    } else if (patch.weight !== undefined || patch.reps !== undefined) {
+      setLimitErrors((prev) => {
+        if (!prev[ei]) return prev;
+        const next = { ...prev };
+        delete next[ei];
+        return next;
+      });
+    }
+
     const exercise = exercises[ei];
     const wasDone = Boolean(exercise?.sets[si]?.done);
     const willBeDone = patch.done === true;
@@ -288,12 +332,25 @@ export default function ActiveWorkout() {
     }
   };
 
-  const addSet = (ei: number) =>
+  const addSet = (ei: number) => {
+    if (exercises[ei]?.sets.length >= 10) {
+      setLimitErrors((prev) => ({ ...prev, [ei]: "Cannot add more than 10 sets per exercise." }));
+      return;
+    }
     setExercises((prev) => prev.map((e, i) => {
       if (i !== ei) return e;
       const last = e.sets[e.sets.length - 1];
       return { ...e, sets: [...e.sets, { reps: last?.reps ?? 10, weight: e.usesWeight === false ? undefined : last?.weight ?? 20, done: false }] };
     }));
+  };
+
+  const deleteSet = (ei: number, si: number) => {
+    setExercises((prev) => prev.map((e, i) => {
+      if (i !== ei) return e;
+      if (e.sets.length <= 1) return e;
+      return { ...e, sets: e.sets.filter((_, j) => j !== si) };
+    }));
+  };
 
   const updateTimedItem = (id: string, patch: Partial<TimedRoutineItem>) =>
     setTimedItems((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item));
@@ -303,23 +360,73 @@ export default function ActiveWorkout() {
 
   const [addQ, setAddQ] = useState("");
   const [addList, setAddList] = useState<any[]>([]);
+  const [promptSaveItem, setPromptSaveItem] = useState<any>(null);
+  const [tab, setTab] = useState<"exercise" | "asana" | "pranayama">("exercise");
+  const [bodyPart, setBodyPart] = useState("all");
+  const [equipment, setEquipment] = useState("all");
+  const [showFilter, setShowFilter] = useState<"category" | "equipment" | null>(null);
   
   useEffect(() => {
-    if (!showAdd) return;
+    if (!showAdd || tab !== "exercise") return;
     let active = true;
-    fetchExerciseList(addQ).then(res => {
+    fetchExerciseList(addQ, bodyPart === "all" ? "" : bodyPart, "", 20, equipment).then(res => {
       if (active) setAddList(res.data);
     });
     return () => { active = false; };
-  }, [addQ, showAdd]);
+  }, [addQ, showAdd, tab, bodyPart, equipment]);
 
   const addExercise = (ex: any) => {
-    const weighted = usesExternalWeight(ex.equipment, ex.name);
-    setExercises((prev) => [...prev, {
-      exerciseId: ex.id, name: ex.name, image: ex.gifUrl, targetMuscles: ex.target || "", equipment: ex.equipment, usesWeight: weighted,
-      sets: [{ reps: 10, weight: weighted ? 20 : undefined, done: false }],
-    }]);
+    let newItem: any;
+    if (ex.type === "asana" || ex.type === "pranayama") {
+      const duration = ex.duration || (ex.type === "asana" ? 30 : 300);
+      newItem = {
+        id: uid(), refId: ex.id, type: ex.type, name: ex.name, image: ex.gifUrl, duration, remaining: duration, running: false, done: false, addedDynamically: true
+      };
+      setTimedItems((prev) => [...prev, newItem]);
+    } else {
+      const weighted = usesExternalWeight(ex.equipment, ex.name);
+      newItem = {
+        exerciseId: ex.id, name: ex.name, image: ex.gifUrl, targetMuscles: ex.target || "", equipment: ex.equipment, usesWeight: weighted,
+        sets: [{ reps: 10, weight: weighted ? 20 : undefined, done: false }], addedDynamically: true
+      };
+      setExercises((prev) => [...prev, newItem]);
+    }
+
+    if (draftRoutine) {
+      setPromptSaveItem(ex);
+    }
+
     setShowAdd(false);
+  };
+
+  const saveToRoutine = () => {
+    if (!promptSaveItem || !draftRoutine) return;
+    const ex = promptSaveItem;
+    const store = useStore.getState();
+    const routine = store.weeklyRoutines.find(r => r.id === draftRoutine.routineId);
+    if (routine) {
+      const updatedRoutine = { ...routine, days: [...routine.days] };
+      const dayIndex = updatedRoutine.days.findIndex(d => d.day === draftRoutine.day);
+      if (dayIndex >= 0) {
+        const dayPlan = updatedRoutine.days[dayIndex];
+        const newRoutineItem = {
+          id: uid(),
+          type: ex.type === "asana" || ex.type === "pranayama" ? ex.type : "exercise",
+          refId: ex.id,
+          name: ex.name,
+          image: ex.gifUrl,
+          equipment: ex.equipment,
+          usesWeight: ex.type === "asana" || ex.type === "pranayama" ? undefined : usesExternalWeight(ex.equipment, ex.name),
+          sets: ex.type === "asana" || ex.type === "pranayama" 
+            ? [{ id: uid(), duration: ex.duration || (ex.type === "asana" ? 30 : 300) }] 
+            : [{ id: uid(), reps: 10, weight: usesExternalWeight(ex.equipment, ex.name) ? 20 : undefined }],
+          restTimer: 60
+        };
+        updatedRoutine.days[dayIndex] = { ...dayPlan, items: [...dayPlan.items, newRoutineItem as any] };
+        store.saveWeeklyRoutine(updatedRoutine);
+      }
+    }
+    setPromptSaveItem(null);
   };
 
   const volume = exercises.reduce((a, e) => a + e.sets.filter((s) => s.done).reduce((b, s) => b + s.reps * (s.weight || 0), 0), 0);
@@ -329,7 +436,11 @@ export default function ActiveWorkout() {
 
   const finish = () => {
     const completed = exercises.map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) })).filter((e) => e.sets.length);
-    if (completed.length > 0) {
+    const completedTimed = timedItems.filter((item) => item.done || draftRoutine).map(i => ({
+      id: i.id, refId: i.refId, type: i.type, name: i.name, image: i.image, duration: i.duration
+    }));
+
+    if (completed.length > 0 || completedTimed.length > 0) {
       addWorkout({
         id: uid(),
         date: todayISO(),
@@ -339,6 +450,7 @@ export default function ActiveWorkout() {
         volume,
         notes: draftRoutine ? `Completed from routine: ${draftRoutine.routineName}` : undefined,
         exercises: completed,
+        timedItems: completedTimed.length > 0 ? completedTimed : undefined,
       });
     }
     const completedAsanas = timedItems.filter((item) => item.type === "asana" && (item.done || draftRoutine));
@@ -380,15 +492,11 @@ export default function ActiveWorkout() {
   return (
     <main style={shell}>
       {/* header */}
-      <header className="glass" style={{ position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "calc(12px + env(safe-area-inset-top)) 16px 12px", borderBottom: "1px solid rgba(115,253,156,0.08)" }}>
-        <button className="btn btn-secondary" onClick={() => setShowDiscard(true)} aria-label="Discard session" style={{ minHeight: 36, padding: "7px 10px", fontSize: 12 }}>
-          <IconClose width={14} height={14} /> Discard
-        </button>
+      <header className="glass" style={{ position: "sticky", top: 0, zIndex: 5, display: "flex", justifyContent: "center", alignItems: "center", padding: "calc(12px + env(safe-area-inset-top)) 16px 12px", borderBottom: "1px solid rgba(115,253,156,0.08)" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontWeight: 700 }}>{sessionName || (draftRoutine ? draftRoutine.routineName : "Active Workout")}</div>
           <div className="text-mono seafoam row center gap-xs" style={{ fontSize: 13 }}><IconTimer width={13} height={13} />{mm}:{ss}</div>
         </div>
-        <button className="btn btn-primary" style={{ minHeight: 38, padding: "8px 16px", fontSize: 14 }} onClick={() => setDone(true)}>Finish</button>
       </header>
 
       <div style={{ maxWidth: 520, margin: "0 auto", padding: `18px 16px ${restTimer ? 128 : 40}px`, width: "100%" }}>
@@ -417,86 +525,171 @@ export default function ActiveWorkout() {
 
         {/* exercises */}
         <div className="stack gap-md">
-          {timedItems.map((item) => (
+          {timedItems.map((item, ti) => (
             <TimedRoutineCard
               key={item.id}
               item={item}
               onToggle={() => updateTimedItem(item.id, { running: !item.running && item.remaining > 0 })}
               onReset={() => resetTimedItem(item.id)}
               onDone={() => updateTimedItem(item.id, { done: !item.done, running: false, remaining: item.done ? item.duration : 0 })}
+              onDelete={(item as any).addedDynamically ? () => setTimedItems(prev => prev.filter((_, i) => i !== ti)) : undefined}
             />
           ))}
 
           {exercises.map((ex, ei) => (
             <motion.div key={ei} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ padding: 16 }}>
-                <Link
-                  href={`/library/train/${encodeURIComponent(ex.exerciseId)}`}
-                  style={{
-                    color: "inherit",
-                    display: "grid",
-                    gridTemplateColumns: ex.image ? "58px 1fr" : "1fr",
-                    alignItems: "center",
-                    gap: 12,
-                    maxWidth: "100%",
-                    textDecoration: "none",
-                    marginBottom: 12,
-                  }}
-                >
-                  {ex.image && (
-                    <span style={{ width: 54, height: 54, borderRadius: 12, background: "#fff", overflow: "hidden", display: "grid", placeItems: "center" }}>
-                      {/\.(mp4|webm|mov)(\?|$)/i.test(ex.image) ? (
-                        <video src={ex.image} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                      ) : (
-                        <img src={ex.image} alt={ex.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                      )}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                  <Link
+                    href={`/library/train/${encodeURIComponent(ex.exerciseId)}`}
+                    style={{
+                      color: "inherit",
+                      display: "grid",
+                      gridTemplateColumns: ex.image ? "58px 1fr" : "1fr",
+                      alignItems: "center",
+                      gap: 12,
+                      maxWidth: "100%",
+                      flex: 1,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {ex.image && (
+                      <span style={{ width: 54, height: 54, borderRadius: 12, background: "#fff", overflow: "hidden", display: "grid", placeItems: "center" }}>
+                        {/\.(mp4|webm|mov)(\?|$)/i.test(ex.image) ? (
+                          <video src={ex.image} autoPlay loop muted playsInline style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        ) : (
+                          <img src={ex.image} alt={ex.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                        )}
+                      </span>
+                    )}
+                    <span style={{ minWidth: 0 }}>
+                      <span
+                        style={{
+                          color: "var(--color-mint-active)",
+                          display: "block",
+                          fontWeight: 800,
+                          fontSize: 17,
+                          textTransform: "capitalize",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis"
+                        }}
+                      >
+                        {ex.name}
+                      </span>
+                      <span className="text-caption" style={{ display: "block", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ex.usesWeight === false ? "Bodyweight / no KG needed" : `Target: ${ex.targetMuscles || "Strength"}`}
+                      </span>
                     </span>
+                  </Link>
+                  {(ex as any).addedDynamically && (
+                    <button className="icon-btn" style={{ color: "var(--color-error)", alignSelf: "flex-start", marginTop: -2 }} onClick={() => setExercises(prev => prev.filter((_, i) => i !== ei))}>
+                      <IconTrash width={20} height={20} />
+                    </button>
                   )}
-                  <span style={{ minWidth: 0 }}>
-                    <span
-                      style={{
-                        color: "var(--color-mint-active)",
-                        display: "block",
-                        fontWeight: 800,
-                        fontSize: 17,
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {ex.name}
-                    </span>
-                    <span className="text-caption" style={{ display: "block", marginTop: 2 }}>
-                      {ex.usesWeight === false ? "Bodyweight / no KG needed" : `Target: ${ex.targetMuscles || "Strength"}`}
-                    </span>
-                  </span>
-                </Link>
+                </div>
                 {ex.restTimer ? (
                   <div className="pill" style={{ marginBottom: 12 }}>
                     <IconTimer width={13} height={13} /> Break {ex.restTimer >= 60 ? `${Math.round(ex.restTimer / 60)} min` : `${ex.restTimer}s`} between sets
                   </div>
                 ) : null}
 
-                <div style={{ display: "grid", gridTemplateColumns: ex.usesWeight === false ? "40px 1fr 48px" : "40px 1fr 1fr 48px", gap: 8, alignItems: "center" }}>
-                  <Head>Set</Head>{ex.usesWeight !== false && <Head>KG</Head>}<Head>Reps</Head><Head><IconCheck width={14} height={14}/></Head>
+                {limitErrors[ei] && <LimitNotice message={limitErrors[ei]} />}
+
+                <div style={{ display: "grid", gridTemplateColumns: ex.usesWeight === false ? "40px 1fr 48px 32px" : "40px 1fr 1fr 48px 32px", gap: 8, alignItems: "center" }}>
+                  <Head>Set</Head>{ex.usesWeight !== false && <Head>KG</Head>}<Head>Reps</Head><Head><IconCheck width={14} height={14}/></Head><Head>{" "}</Head>
                   {ex.sets.map((s, si) => (
-                    <SetRow key={si} n={si + 1} s={s} usesWeight={ex.usesWeight !== false} onChange={(p) => update(ei, si, p)} />
+                    <SetRow key={si} n={si + 1} s={s} usesWeight={ex.usesWeight !== false} onChange={(p) => update(ei, si, p)} onDelete={ex.sets.length > 1 ? () => deleteSet(ei, si) : undefined} />
                   ))}
                 </div>
 
-                <button onClick={() => addSet(ei)} className="btn btn-ghost" style={{ width: "100%", marginTop: 10, border: "1px dashed var(--color-text-muted)", borderRadius: 10 }}>
-                  <IconPlus width={16} height={16} /> Add set
-                </button>
+                {ex.sets.length >= 10 ? (
+                  <div style={{ marginTop: 12 }}>
+                    <LimitNotice message="Maximum 10 sets reached." />
+                  </div>
+                ) : (
+                  <button onClick={() => addSet(ei)} className="btn btn-ghost" style={{ width: "100%", marginTop: 10, border: "1px dashed var(--color-text-muted)", borderRadius: 10 }}>
+                    <IconPlus width={16} height={16} /> Add set
+                  </button>
+                )}
               </div>
             </motion.div>
           ))}
         </div>
 
         <button onClick={() => setShowAdd(true)} className="card card-interactive" style={{ width: "100%", marginTop: 16, display: "flex", justifyContent: "center", gap: 8, color: "#73fd9c", fontWeight: 600, padding: 16 }}>
-          <IconPlus width={20} height={20} /> Add Exercise
+          <IconPlus width={20} height={20} /> Add Item
         </button>
 
-        <div className="row between" style={{ marginTop: 20, padding: "0 4px" }}>
-          <span className="text-caption">Volume</span>
-          <span className="text-mono" style={{ fontWeight: 700 }}>{volume.toLocaleString()} kg · {completedSets} sets · {completedExercises} exercises</span>
+        <div style={{ marginTop: 24, padding: "16px 0", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="text-caption uppercase-label" style={{ textAlign: "center", color: "var(--color-text-muted)", letterSpacing: "1.5px", fontSize: 11 }}>Session Summary</div>
+          <div style={{ display: "flex", flexWrap: "nowrap", justifyContent: "center", overflowX: "auto", gap: 12, paddingBottom: 8, WebkitOverflowScrolling: "touch", msOverflowStyle: "none", scrollbarWidth: "none" }}>
+            {exercises.length > 0 && (
+              <>
+                <div style={{ flex: "0 0 auto", minWidth: 80, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 8px", background: "var(--color-surface-2)", borderRadius: 16, border: "1px solid var(--color-border)", gap: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", position: "relative", overflow: "hidden" }}>
+                  <div style={{ color: "var(--color-train)", background: "color-mix(in srgb, var(--color-train) 12%, transparent)", padding: 10, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <IconDumbbell width={20} height={20} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <span className="text-mono" style={{ fontSize: 18, fontWeight: 800, lineHeight: 1, color: "var(--color-text-primary)" }}>{volume.toLocaleString()}</span>
+                    <span style={{ fontSize: 10, color: "var(--color-text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>kg</span>
+                  </div>
+                </div>
+                <div style={{ flex: "0 0 auto", minWidth: 80, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 8px", background: "var(--color-surface-2)", borderRadius: 16, border: "1px solid var(--color-border)", gap: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", position: "relative", overflow: "hidden" }}>
+                  <div style={{ color: "var(--color-train)", background: "color-mix(in srgb, var(--color-train) 12%, transparent)", padding: 10, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <IconRepeat width={20} height={20} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <span className="text-mono" style={{ fontSize: 18, fontWeight: 800, lineHeight: 1, color: "var(--color-text-primary)" }}>{completedSets}</span>
+                    <span style={{ fontSize: 10, color: "var(--color-text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>{completedSets === 1 ? 'set' : 'sets'}</span>
+                  </div>
+                </div>
+                <div style={{ flex: "0 0 auto", minWidth: 80, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 8px", background: "var(--color-surface-2)", borderRadius: 16, border: "1px solid var(--color-border)", gap: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", position: "relative", overflow: "hidden" }}>
+                  <div style={{ color: "var(--color-train)", background: "color-mix(in srgb, var(--color-train) 12%, transparent)", padding: 10, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <IconMove width={20} height={20} />
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    <span className="text-mono" style={{ fontSize: 18, fontWeight: 800, lineHeight: 1, color: "var(--color-text-primary)" }}>{completedExercises}</span>
+                    <span style={{ fontSize: 10, color: "var(--color-text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>{completedExercises === 1 ? 'exercise' : 'exercises'}</span>
+                  </div>
+                </div>
+              </>
+            )}
+            {timedItems.some((i) => i.type === "asana") && (
+              <div style={{ flex: "0 0 auto", minWidth: 80, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 8px", background: "var(--color-surface-2)", borderRadius: 16, border: "1px solid var(--color-border)", gap: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", position: "relative", overflow: "hidden" }}>
+                <div style={{ color: "var(--color-yoga)", background: "color-mix(in srgb, var(--color-yoga) 12%, transparent)", padding: 10, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconYoga width={20} height={20} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <span className="text-mono" style={{ fontSize: 18, fontWeight: 800, lineHeight: 1, color: "var(--color-text-primary)" }}>{timedItems.filter((i) => i.type === "asana" && i.done).length}</span>
+                  <span style={{ fontSize: 10, color: "var(--color-text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>{timedItems.filter((i) => i.type === "asana" && i.done).length === 1 ? 'pose' : 'poses'}</span>
+                </div>
+              </div>
+            )}
+            {timedItems.some((i) => i.type === "pranayama") && (
+              <div style={{ flex: "0 0 auto", minWidth: 80, display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 8px", background: "var(--color-surface-2)", borderRadius: 16, border: "1px solid var(--color-border)", gap: 10, boxShadow: "0 4px 12px rgba(0,0,0,0.15)", position: "relative", overflow: "hidden" }}>
+                <div style={{ color: "var(--color-breathe)", background: "color-mix(in srgb, var(--color-breathe) 12%, transparent)", padding: 10, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <IconBreathe width={20} height={20} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                  <span className="text-mono" style={{ fontSize: 18, fontWeight: 800, lineHeight: 1, color: "var(--color-text-primary)" }}>{timedItems.filter((i) => i.type === "pranayama" && i.done).length}</span>
+                  <span style={{ fontSize: 10, color: "var(--color-text-muted)", textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>{timedItems.filter((i) => i.type === "pranayama" && i.done).length === 1 ? 'breath' : 'breaths'}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          {exercises.length === 0 && timedItems.length === 0 && (
+            <div className="text-caption" style={{ textAlign: "center", color: "var(--color-text-muted)", marginTop: 8 }}>0 completed</div>
+          )}
+        </div>
+
+        <div className="row gap-md" style={{ marginTop: 32 }}>
+          <button className="btn btn-secondary" style={{ flex: 1, minHeight: 48 }} onClick={() => setShowDiscard(true)}>
+            Discard
+          </button>
+          <button className="btn btn-primary" style={{ flex: 1, minHeight: 48 }} onClick={() => setDone(true)}>
+            Finish
+          </button>
         </div>
       </div>
 
@@ -532,17 +725,111 @@ export default function ActiveWorkout() {
       </AnimatePresence>
 
       <AnimatePresence>
+        {promptSaveItem && (
+          <CenterModal onClose={() => setPromptSaveItem(null)} title="Save to routine?">
+            <div style={{ textAlign: "center", padding: "8px 0 16px" }}>
+              <p style={{ color: "var(--color-text-secondary)", marginBottom: 24, fontSize: 15, lineHeight: 1.4 }}>
+                Permanently add <strong>{promptSaveItem.name}</strong> to this routine?
+              </p>
+              <div className="row gap-sm">
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setPromptSaveItem(null)}>
+                  No
+                </button>
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={saveToRoutine}>
+                  Yes, Save
+                </button>
+              </div>
+            </div>
+          </CenterModal>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showAdd && (
-          <Sheet onClose={() => setShowAdd(false)} title="Add Exercise">
-            <div className="stack gap-sm" style={{ maxHeight: "60vh", overflowY: "auto" }}>
-              <input className="input" placeholder="Search..." value={addQ} onChange={e => setAddQ(e.target.value)} style={{ width: "100%", marginBottom: 12, padding: "8px 12px" }} />
-              {addList.map((e) => (
-                <button key={e.id} className="card card-interactive" onClick={() => addExercise(e)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", textAlign: "left" }}>
-                  <div>
-                    <div style={{ fontWeight: 600, textTransform: "capitalize" }}>{e.name}</div>
-                    <div className="text-caption" style={{ textTransform: "capitalize" }}>{e.target}</div>
+          <Sheet onClose={() => setShowAdd(false)} title="Add Item">
+            <div style={{ padding: "0 0 16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 16 }}>
+                {TABS.map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    className={`chip ${tab === id ? "active" : ""}`}
+                    onClick={() => setTab(id)}
+                    style={{ minHeight: 48, padding: "8px 6px", justifyContent: "center", display: "flex", alignItems: "center", gap: 6 }}
+                  >
+                    <Icon width={15} height={15} /> {label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ position: "relative", marginBottom: 14 }}>
+                <IconSearch width={18} height={18} style={{ position: "absolute", left: 15, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)" }} />
+                <input
+                  className="input input-with-icon"
+                  placeholder={`Search ${tab === "exercise" ? "training" : tab === "asana" ? "poses" : "breathing"}…`}
+                  value={addQ}
+                  onChange={(event) => setAddQ(event.target.value)}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              {tab === "exercise" && (
+                <div className="clay" style={{ padding: 12, marginBottom: 14, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <button className="card card-interactive" onClick={() => setShowFilter("category")} style={{ padding: "10px 12px", textAlign: "left", minWidth: 0 }}>
+                    <span className="uppercase-label">Category</span>
+                    <span style={{ display: "block", fontWeight: 750, textTransform: "capitalize", marginTop: 3, color: "var(--color-mint-active)" }}>{bodyPart}</span>
+                  </button>
+                  <button className="card card-interactive" onClick={() => setShowFilter("equipment")} style={{ padding: "10px 12px", textAlign: "left", minWidth: 0 }}>
+                    <span className="uppercase-label">Equipment</span>
+                    <span style={{ display: "block", fontWeight: 750, marginTop: 3, color: "var(--color-mint-active)" }}>{EQUIPMENT_LABELS[equipment]}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="stack gap-sm" style={{ maxHeight: "50vh", overflowY: "auto", paddingBottom: 24 }}>
+              {tab === "exercise" && addList.map((e) => (
+                <button key={e.id} className="card card-interactive" onClick={() => addExercise(e)} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 12, width: "100%", padding: 12, textAlign: "left", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  {e.gifUrl ? (
+                    <div style={{ width: 46, height: 46, borderRadius: 10, background: "#fff", overflow: "hidden", display: "grid", placeItems: "center" }}>
+                      <img src={e.gifUrl} alt={e.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    </div>
+                  ) : (
+                    <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--color-surface-main)", color: "var(--color-train)", display: "grid", placeItems: "center" }}>
+                      <IconDumbbell width={20} height={20} />
+                    </div>
+                  )}
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 750, textTransform: "capitalize" }}>{e.name}</span>
+                    <span className="text-caption" style={{ display: "block", marginTop: 3, textTransform: "capitalize" }}>{e.bodyPart || e.target}</span>
+                  </span>
+                  <span style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", background: "var(--color-surface-3)", color: "var(--color-text-muted)", flexShrink: 0 }}>
+                    <IconPlus width={16} height={16} />
+                  </span>
+                </button>
+              ))}
+              {tab === "asana" && ASANAS.filter(a => `${a.nameEnglish} ${a.nameSanskrit}`.toLowerCase().includes(addQ.toLowerCase())).slice(0, 10).map((a) => (
+                <button key={a.id} className="card card-interactive" onClick={() => addExercise({ id: a.id, type: "asana", name: a.nameEnglish, duration: a.holdSeconds.intermediate })} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 12, width: "100%", padding: 12, textAlign: "left", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--color-surface-main)", color: "var(--color-yoga)", display: "grid", placeItems: "center" }}>
+                    <IconYoga width={20} height={20} />
                   </div>
-                  <IconPlus width={18} height={18} style={{ color: "#73fd9c" }} />
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 750 }}>{a.nameEnglish}</span>
+                    <span className="text-caption" style={{ display: "block", marginTop: 3 }}>{a.nameSanskrit}</span>
+                  </span>
+                  <span style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", background: "var(--color-surface-3)", color: "var(--color-text-muted)", flexShrink: 0 }}>
+                    <IconPlus width={16} height={16} />
+                  </span>
+                </button>
+              ))}
+              {tab === "pranayama" && TECHNIQUES.filter(t => `${t.name} ${t.nameSanskrit}`.toLowerCase().includes(addQ.toLowerCase())).slice(0, 5).map((t) => (
+                <button key={t.id} className="card card-interactive" onClick={() => addExercise({ id: t.id, type: "pranayama", name: t.name, duration: 300 })} style={{ display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 12, width: "100%", padding: 12, textAlign: "left", border: "1px solid rgba(255,255,255,0.05)" }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--color-surface-main)", color: "var(--color-train)", display: "grid", placeItems: "center" }}>
+                    <IconBreathe width={20} height={20} />
+                  </div>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontSize: 15, fontWeight: 750 }}>{t.name}</span>
+                    <span className="text-caption" style={{ display: "block", marginTop: 3 }}>{t.nameSanskrit}</span>
+                  </span>
+                  <span style={{ width: 32, height: 32, borderRadius: "50%", display: "grid", placeItems: "center", background: "var(--color-surface-3)", color: "var(--color-text-muted)", flexShrink: 0 }}>
+                    <IconPlus width={16} height={16} />
+                  </span>
                 </button>
               ))}
             </div>
@@ -559,17 +846,91 @@ export default function ActiveWorkout() {
                 style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(115,253,156,0.14)", display: "grid", placeItems: "center", margin: "0 auto 16px", boxShadow: "var(--glow-mint)" }}>
                 <IconCheck width={36} height={36} style={{ color: "#73fd9c" }} />
               </motion.div>
-              <div className="row" style={{ justifyContent: "space-around", margin: "16px 0" }}>
-                <Metric label="Duration" value={`${Math.max(1, Math.round(seconds/60))}m`} />
-                <Metric label="Volume" value={`${volume.toLocaleString()}kg`} />
-                <Metric label="Done" value={`${completedExercises + completedTimedItems}`} />
+              <div style={{ marginBottom: 24 }}>
+                <p style={{ color: "var(--color-text-secondary)", fontSize: 15, lineHeight: 1.5 }}>
+                  Session finished. You can check your stats in the <strong>Exercise Logs</strong>.
+                </p>
               </div>
-              <button className="btn btn-primary btn-block btn-lg" onClick={finish} disabled={completedSets === 0 && completedTimedItems === 0}>Finish</button>
+              {completedSets === 0 && completedTimedItems === 0 && (
+                <p className="text-caption" style={{ color: "var(--color-warning-soft)", marginBottom: 16, lineHeight: 1.4 }}>
+                  You haven't completed any exercises or timers. Finishing now will discard this session.
+                </p>
+              )}
+              <button className="btn btn-primary btn-block btn-lg" onClick={finish}>
+                {completedSets === 0 && completedTimedItems === 0 ? "Finish anyway" : "Finish"}
+              </button>
             </div>
           </CenterModal>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showFilter === "category" && (
+          <FilterSheet
+            title="Exercise Category"
+            value={bodyPart}
+            options={BODY_PARTS}
+            getLabel={(part) => part}
+            onPick={(next) => {
+              setBodyPart(next);
+              setShowFilter(null);
+            }}
+            onClose={() => setShowFilter(null)}
+          />
+        )}
+        {showFilter === "equipment" && (
+          <FilterSheet
+            title="Equipment"
+            value={equipment}
+            options={EQUIPMENT_OPTIONS}
+            getLabel={(item) => EQUIPMENT_LABELS[item] || item}
+            onPick={(next) => {
+              setEquipment(next);
+              setShowFilter(null);
+            }}
+            onClose={() => setShowFilter(null)}
+          />
+        )}
+      </AnimatePresence>
     </main>
+  );
+}
+
+function FilterSheet({ title, value, options, getLabel, onPick, onClose }: { title: string; value: string; options: string[]; getLabel: (value: string) => string; onPick: (value: string) => void; onClose: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "fixed", inset: 0, zIndex: 500, display: "grid", alignItems: "end", background: "rgba(4,8,6,0.65)" }} onClick={onClose}>
+      <motion.section initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 350, damping: 30 }} className="glass" style={{ width: "min(520px, 100%)", margin: "0 auto", padding: "18px 20px calc(28px + env(safe-area-inset-bottom))", borderTopLeftRadius: 18, borderTopRightRadius: 18 }} onClick={(event) => event.stopPropagation()}>
+        <div className="row between" style={{ gap: 12, marginBottom: 16 }}>
+          <div>
+            <h2 style={{ fontSize: 18, fontWeight: 700 }}>{title}</h2>
+            <p className="text-caption" style={{ marginTop: 2 }}>Choose one filter</p>
+          </div>
+        </div>
+        <div className="stack gap-xs" style={{ maxHeight: "56vh", overflowY: "auto" }}>
+          {options.map((part) => (
+            <button
+              key={part}
+              className={`card card-interactive ${value === part ? "pill-active" : ""}`}
+              onClick={() => onPick(part)}
+              style={{
+                width: "100%",
+                minHeight: 48,
+                padding: "12px 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                textAlign: "left",
+                textTransform: "capitalize",
+                border: value === part ? "1px solid rgba(115,253,156,0.55)" : "1px solid rgba(255,255,255,0.05)",
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>{getLabel(part)}</span>
+              {value === part && <IconCheck width={17} height={17} style={{ color: "var(--color-mint-active)" }} />}
+            </button>
+          ))}
+        </div>
+      </motion.section>
+    </motion.div>
   );
 }
 
@@ -585,13 +946,13 @@ function Head({ children }: { children: React.ReactNode }) {
   return <div className="text-mono" style={{ fontSize: 11, color: "var(--color-text-muted)", textTransform: "uppercase", textAlign: "center", letterSpacing: "0.06em" }}>{children}</div>;
 }
 
-function SetRow({ n, s, usesWeight, onChange }: { n: number; s: LoggedSet; usesWeight: boolean; onChange: (p: Partial<LoggedSet>) => void }) {
+function SetRow({ n, s, usesWeight, onChange, onDelete }: { n: number; s: LoggedSet; usesWeight: boolean; onChange: (p: Partial<LoggedSet>) => void; onDelete?: () => void }) {
   return (
     <>
       <div className="text-mono" style={{ textAlign: "center", color: s.done ? "#73fd9c" : "var(--color-text-secondary)", fontWeight: 600 }}>{n}</div>
-      {usesWeight && <input className="input" inputMode="decimal" value={s.weight ?? ""} onChange={(e) => onChange({ weight: Number(e.target.value) || undefined })}
+      {usesWeight && <input className="input" type="number" inputMode="decimal" value={s.weight ?? ""} onChange={(e) => onChange({ weight: Number(e.target.value) || undefined })}
         style={{ padding: "9px 8px", textAlign: "center", fontFamily: "var(--font-mono)" }} />}
-      <input className="input" inputMode="numeric" value={s.reps} onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
+      <input className="input" type="number" inputMode="numeric" value={s.reps || ""} onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
         style={{ padding: "9px 8px", textAlign: "center", fontFamily: "var(--font-mono)" }} />
       <button onClick={() => onChange({ done: !s.done })} aria-label="Mark set done" style={{
         height: 38, borderRadius: 9, border: s.done ? "none" : "1px solid var(--color-text-muted)",
@@ -600,7 +961,33 @@ function SetRow({ n, s, usesWeight, onChange }: { n: number; s: LoggedSet; usesW
       }}>
         {s.done && <IconCheck width={16} height={16} />}
       </button>
+      {onDelete ? (
+        <button onClick={onDelete} aria-label="Delete set" style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 38, color: "var(--color-text-muted)", background: "transparent", border: "none", cursor: "pointer" }}>
+          <IconTrash width={16} height={16} />
+        </button>
+      ) : (
+        <div />
+      )}
     </>
+  );
+}
+
+function LimitNotice({ message }: { message: string }) {
+  return (
+    <div
+      style={{
+        margin: "0 0 12px",
+        padding: "10px 12px",
+        borderRadius: 10,
+        border: "1px solid rgba(239,140,140,0.36)",
+        background: "rgba(239,140,140,0.1)",
+        color: "#efb0b0",
+        fontSize: 13,
+        fontWeight: 600,
+      }}
+    >
+      {message}
+    </div>
   );
 }
 
@@ -653,11 +1040,13 @@ function TimedRoutineCard({
   onToggle,
   onReset,
   onDone,
+  onDelete,
 }: {
   item: TimedRoutineItem;
   onToggle: () => void;
   onReset: () => void;
   onDone: () => void;
+  onDelete?: () => void;
 }) {
   const mm = String(Math.floor(item.remaining / 60)).padStart(2, "0");
   const ss = String(item.remaining % 60).padStart(2, "0");
@@ -668,7 +1057,7 @@ function TimedRoutineCard({
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="card" style={{ padding: 16 }}>
       <div className="row between" style={{ gap: 12, alignItems: "flex-start", marginBottom: 12 }}>
-        <Link href={href} style={{ display: "flex", alignItems: "flex-start", gap: 10, minWidth: 0, color: "inherit", textDecoration: "none" }}>
+        <Link href={href} style={{ display: "flex", alignItems: "flex-start", gap: 10, minWidth: 0, color: "inherit", textDecoration: "none", flex: 1 }}>
           {item.image ? (
             <span style={{ width: 48, height: 48, borderRadius: 12, background: "#fff", overflow: "hidden", display: "grid", placeItems: "center", flexShrink: 0 }}>
               <img src={item.image} alt={item.name} loading="lazy" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
@@ -679,10 +1068,15 @@ function TimedRoutineCard({
             </span>
           )}
           <span style={{ minWidth: 0 }}>
-            <span style={{ display: "block", fontWeight: 800, color }}>{item.name}</span>
+            <span style={{ display: "block", fontWeight: 800, color, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</span>
             <div className="text-caption" style={{ marginTop: 2 }}>{item.type === "asana" ? "Pose hold timer" : "Breathing session timer"}</div>
           </span>
         </Link>
+        {onDelete && (
+          <button className="icon-btn" onClick={onDelete} style={{ color: "var(--color-error)", marginTop: -4 }}>
+            <IconTrash width={20} height={20} />
+          </button>
+        )}
         <div className="text-mono" style={{ fontSize: 24, fontWeight: 800, color }}>
           {item.done ? "Done" : `${mm}:${ss}`}
         </div>

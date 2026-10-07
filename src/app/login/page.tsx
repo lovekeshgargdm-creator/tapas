@@ -16,6 +16,8 @@ export default function LoginPage() {
   const router = useRouter();
   const isAuthed = useStore((s) => s.isAuthed);
   const onboarded = useStore((s) => s.profile.onboarded);
+  const login = useStore((s) => s.login);
+  const seedDemo = useStore((s) => s.seedDemo);
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
@@ -98,7 +100,7 @@ export default function LoginPage() {
   return (
     <main
       style={{
-        minHeight: "100dvh",
+        minHeight: "100vh",
         position: "relative",
         overflow: "hidden",
         display: "flex",
@@ -254,6 +256,19 @@ export default function LoginPage() {
           >
             <IconGoogle />
             Continue with Google
+          </button>
+
+          <button 
+            type="button" 
+            className="btn btn-secondary btn-block" 
+            onClick={() => {
+               login("admin@admin.com", "Demo User");
+               seedDemo();
+            }}
+            disabled={busy}
+            style={{ marginTop: 12, background: "transparent", border: "1px dashed var(--color-border)", color: "var(--color-text-secondary)", fontWeight: 500 }}
+          >
+            Continue in Demo Mode (Testing)
           </button>
         </motion.div>
 

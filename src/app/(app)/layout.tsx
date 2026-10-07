@@ -21,7 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!mounted || !isAuthed || !onboarded) {
     return (
-      <div style={{ minHeight: "100dvh", display: "grid", placeItems: "center" }}>
+      <div style={{ minHeight: "100vh", display: "grid", placeItems: "center" }}>
         <div style={{ animation: "pulseGlow 1.6s ease-in-out infinite" }}>
           <Logo size={54} withGlow />
         </div>

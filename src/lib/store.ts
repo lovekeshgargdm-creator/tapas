@@ -16,6 +16,8 @@ import type {
   RoutineSessionDraft,
   JournalEntry,
   AccountLog,
+  FastingSession,
+  FastingProtocol,
 } from "./types";
 
 export const uid = () =>
@@ -46,6 +48,7 @@ export interface AppState {
   yoga: YogaSession[];
   breath: BreathSession[];
   body: BodyMetric[];
+  fasting: FastingSession[];
   streaks: Record<ModuleKey, StreakState>;
   enrollment: ProgramEnrollment | null;
   prefs: Prefs;
@@ -98,6 +101,11 @@ export interface AppState {
   deleteYogaSession: (id: string) => void;
   deleteWorkout: (id: string) => void;
 
+  // fasting
+  startFast: (protocol: FastingProtocol, targetHours: number) => void;
+  endFast: (id: string, notes?: string) => void;
+  deleteFast: (id: string) => void;
+
   seedDemo: () => void;
 }
 
@@ -108,6 +116,7 @@ export type StoredAppData = Pick<
   | "yoga"
   | "breath"
   | "body"
+  | "fasting"
   | "streaks"
   | "enrollment"
   | "prefs"
@@ -136,6 +145,7 @@ const baseStoredData = (): StoredAppData => ({
   yoga: [],
   breath: [],
   body: [],
+  fasting: [],
   streaks: { move: emptyStreak(), yoga: emptyStreak(), breathe: emptyStreak() },
   enrollment: null,
   prefs: { sound: true, haptics: true },
@@ -153,6 +163,7 @@ export function selectStoredAppData(state: AppState): StoredAppData {
     yoga: state.yoga,
     breath: state.breath,
     body: state.body,
+    fasting: state.fasting,
     streaks: state.streaks,
     enrollment: state.enrollment,
     prefs: state.prefs,
@@ -211,6 +222,7 @@ export const useStore = create<AppState>()(
       yoga: [],
       breath: [],
       body: [],
+      fasting: [],
       streaks: { move: emptyStreak(), yoga: emptyStreak(), breathe: emptyStreak() },
       enrollment: null,
       prefs: { sound: true, haptics: true },
@@ -274,6 +286,7 @@ export const useStore = create<AppState>()(
           yoga: [],
           breath: [],
           body: [],
+          fasting: [],
           streaks: { move: emptyStreak(), yoga: emptyStreak(), breathe: emptyStreak() },
           enrollment: null,
           draftExercises: [],
@@ -409,6 +422,44 @@ export const useStore = create<AppState>()(
 
       deleteWorkout: (id) =>
         set((st) => ({ workouts: st.workouts.filter((w) => w.id !== id) })),
+
+      startFast: (protocol, targetHours) => {
+        const now = todayISO();
+        set((st) => ({
+          fasting: [
+            {
+              id: uid(),
+              date: now,
+              protocol,
+              targetHours,
+              startedAt: now,
+              completed: false,
+            },
+            ...(st.fasting || []),
+          ],
+        }));
+      },
+
+      endFast: (id, notes) =>
+        set((st) => ({
+          fasting: (st.fasting || []).map((f) => {
+            if (f.id !== id) return f;
+            const endedAt = todayISO();
+            const actualHours =
+              (new Date(endedAt).getTime() - new Date(f.startedAt).getTime()) /
+              3600000;
+            return {
+              ...f,
+              endedAt,
+              actualHours: Math.round(actualHours * 100) / 100,
+              completed: actualHours >= f.targetHours,
+              notes: notes || f.notes,
+            };
+          }),
+        })),
+
+      deleteFast: (id) =>
+        set((st) => ({ fasting: (st.fasting || []).filter((f) => f.id !== id) })),
 
       seedDemo: () => {
         const current = get();
@@ -626,6 +677,14 @@ export const useStore = create<AppState>()(
           { id: uid(), date: isoDaysAgo(4), module: "yoga", title: "Grounding practice", durationMin: 30, posesCount: 11, notes: "Calmer after the evening flow." },
           { id: uid(), date: isoDaysAgo(9), module: "yoga", title: "Better hip mobility", durationMin: 22, posesCount: 9, notes: "Left side still tighter." },
         ];
+        const fasting: FastingSession[] = [
+          { id: uid(), date: isoDaysAgo(1), protocol: "16:8", targetHours: 16, actualHours: 16.5, startedAt: isoDaysAgo(1), endedAt: isoDaysAgo(0.33), completed: true, notes: "Felt great, easy to maintain." },
+          { id: uid(), date: isoDaysAgo(3), protocol: "16:8", targetHours: 16, actualHours: 14.2, startedAt: isoDaysAgo(3), endedAt: isoDaysAgo(2.41), completed: false, notes: "Broke early — social dinner." },
+          { id: uid(), date: isoDaysAgo(5), protocol: "18:6", targetHours: 18, actualHours: 18.1, startedAt: isoDaysAgo(5), endedAt: isoDaysAgo(4.25), completed: true },
+          { id: uid(), date: isoDaysAgo(7), protocol: "16:8", targetHours: 16, actualHours: 16.8, startedAt: isoDaysAgo(7), endedAt: isoDaysAgo(6.3), completed: true },
+          { id: uid(), date: isoDaysAgo(10), protocol: "20:4", targetHours: 20, actualHours: 20.3, startedAt: isoDaysAgo(10), endedAt: isoDaysAgo(9.15), completed: true, notes: "Warrior Diet trial — tough but doable." },
+          { id: uid(), date: isoDaysAgo(13), protocol: "16:8", targetHours: 16, actualHours: 16.0, startedAt: isoDaysAgo(13), endedAt: isoDaysAgo(12.33), completed: true },
+        ];
         set({
           profile: {
             ...current.profile,
@@ -646,6 +705,7 @@ export const useStore = create<AppState>()(
           yoga,
           breath,
           body,
+          fasting,
           weeklyRoutines,
           journalEntries,
           accountLogs: [

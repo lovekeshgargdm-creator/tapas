@@ -17,19 +17,21 @@ import {
   IconHistory,
   IconInstall,
   IconRuler,
+  IconLightbulb,
 } from "@/components/Icons";
 
 const PROFILE_LINKS = [
   { href: "/profile/personal", label: "Personal Details", Icon: IconEdit },
   { href: "/profile/measurements", label: "Measurements", Icon: IconRuler },
   { href: "/profile/activity", label: "Account Activity", Icon: IconActivity },
-  { href: "/profile/roadmap", label: "Future Pipeline", Icon: IconHistory },
+  { href: "/profile/request", label: "Request a Feature", Icon: IconLightbulb },
 ];
 
 export default function ProfilePage() {
   const mounted = useMounted();
   const router = useRouter();
-  const s = useStore();
+  const profile = useStore((s) => s.profile);
+  const logoutFn = useStore((s) => s.logout);
 
   if (!mounted) return <div className="page" />;
 
@@ -41,7 +43,7 @@ export default function ProfilePage() {
     const supabase = getSupabaseBrowserClient();
     if (supabase) await supabase.auth.signOut();
     resetInstallCardsForNextLogin();
-    s.logout();
+    logoutFn();
     router.replace("/login");
   };
 
@@ -69,20 +71,20 @@ export default function ProfilePage() {
             flexShrink: 0,
           }}
         >
-          {s.profile.avatarUrl ? (
-            <img src={s.profile.avatarUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             <span style={{ fontSize: 24, fontWeight: 800, color: "var(--color-mint-active)" }}>
-              {s.profile.name ? s.profile.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : "U"}
+              {profile.name ? profile.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : "U"}
             </span>
           )}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <h2 style={{ fontSize: 20, fontWeight: 700, letterSpacing: 0 }}>
-            {s.profile.name || "Name"}
+            {profile.name || "Name"}
           </h2>
           <p className="text-caption" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis" }}>
-            {s.profile.email || "Profile"}
+            {profile.email || "Profile"}
           </p>
         </div>
       </section>
@@ -93,7 +95,7 @@ export default function ProfilePage() {
           Data & Support
         </h2>
         <div style={{ borderTop: "1px solid var(--color-outline-muted)" }}>
-          <DataLink href="/profile/export" label="Export Data" Icon={IconInstall} />
+          <DataLink href="/profile/export" label="Import / Export Data" Icon={IconInstall} />
           <DataLink href="/profile/support" label="Help & Support" Icon={IconFileText} />
         </div>
       </section>
@@ -108,7 +110,7 @@ export default function ProfilePage() {
         }}
       >
         <div style={{ width: "100%" }}>
-          <InstallAppCard placement={`profile:${s.profile.email || "guest"}`} />
+          <InstallAppCard placement={`profile:${profile.email || "guest"}`} />
         </div>
         <button 
           className="btn btn-secondary" 
@@ -147,26 +149,33 @@ function ProfileGroup({
   return (
     <section style={{ marginBottom: 30 }}>
       <div className="stack gap-sm">
-        {items.map(({ href, label, Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className="card card-interactive"
-            style={{
+        {items.map(({ href, label, Icon }) => {
+          const isExternal = href.startsWith("mailto:") || href.startsWith("http");
+          const sharedProps = {
+            className: "card card-interactive",
+            style: {
               minHeight: 58,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               padding: 16,
-            }}
-          >
-            <span className="row gap-sm" style={{ fontSize: 14, fontWeight: 600 }}>
-              <Icon width={22} height={22} style={{ color: "var(--color-text-secondary)" }} />
-              {label}
-            </span>
-            <IconArrowRight width={18} height={18} style={{ color: "var(--color-text-muted)" }} />
-          </Link>
-        ))}
+            }
+          };
+          const content = (
+            <>
+              <span className="row gap-sm" style={{ fontSize: 14, fontWeight: 600 }}>
+                <Icon width={22} height={22} style={{ color: "var(--color-text-secondary)" }} />
+                {label}
+              </span>
+              <IconArrowRight width={18} height={18} style={{ color: "var(--color-text-muted)" }} />
+            </>
+          );
+          return isExternal ? (
+            <a key={href} href={href} {...sharedProps}>{content}</a>
+          ) : (
+            <Link key={href} href={href} {...sharedProps}>{content}</Link>
+          );
+        })}
       </div>
     </section>
   );

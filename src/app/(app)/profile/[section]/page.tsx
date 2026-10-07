@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { BackHeader } from "@/components/BackHeader";
 import { InstallAppCard } from "@/components/InstallAppCard";
 import { DOSHA_INFO } from "@/lib/seed";
@@ -11,6 +12,7 @@ import { LIMITS, clampNumericInput } from "@/lib/limits";
 import { useMounted } from "@/lib/useMounted";
 import {
   IconCheck,
+  IconClose,
   IconCopy,
   IconEdit,
   IconSearch,
@@ -22,6 +24,7 @@ import {
   IconBreathe,
   IconFlame,
   IconRuler,
+  IconPlus,
 } from "@/components/Icons";
 import type { Gender, RoutineItem, WeeklyRoutine } from "@/lib/types";
 
@@ -35,6 +38,7 @@ const TITLES: Record<string, string> = {
   privacy: "Privacy Policy",
   terms: "Terms & Conditions",
   export: "Export Data",
+  request: "Request a Feature",
 };
 
 const GOALS = [
@@ -62,8 +66,16 @@ function cloneRoutineItem(item: RoutineItem): RoutineItem {
 export default function ProfileSectionPage() {
   const mounted = useMounted();
   const params = useParams();
+  const router = useRouter();
   const section = String(params.section || "");
   const s = useStore();
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const [editing, setEditing] = useState(false);
   const [editingAccount, setEditingAccount] = useState(false);
@@ -92,6 +104,7 @@ export default function ProfileSectionPage() {
   const [saved, setSaved] = useState(false);
   const [profileRoutineSearch, setProfileRoutineSearch] = useState("");
   const [profileRoutineFilter, setProfileRoutineFilter] = useState<"all" | "favorites">("all");
+  const [requestFile, setRequestFile] = useState<File | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -279,6 +292,28 @@ export default function ProfileSectionPage() {
     a.download = "tapas-export.json";
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const parsed = JSON.parse(text);
+        if (parsed.profile) {
+          useStore.setState(parsed);
+          showToast("Data imported successfully!");
+        } else {
+          showToast("Invalid backup file: profile missing.", "error");
+        }
+      } catch (err) {
+        showToast("Failed to parse import file.", "error");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   return (
@@ -749,18 +784,87 @@ export default function ProfileSectionPage() {
 
       {section === "export" && (
         <section className="card">
-          <SectionTitle>Export Data</SectionTitle>
+          <SectionTitle>Import / Export Data</SectionTitle>
           <div className="secondary" style={{ lineHeight: 1.7, marginBottom: 20 }}>
             <p style={{ marginBottom: 16 }}>
-              Download a complete JSON backup of your health journey, including your routines, measurements, and progress logs.
+              Download a complete JSON backup of your health journey, or import an existing backup to restore your routines, measurements, and progress logs.
             </p>
             <p>
               <strong>AI Data Analytics:</strong> Your exported file is formatted perfectly for modern AI tools. Upload this file to ChatGPT, Claude, or Gemini to get personalized insights, analyze your consistency trends, or receive custom recommendations based on your actual practice history.
             </p>
           </div>
-          <button className="btn btn-primary btn-block" onClick={exportData}>
-            Download Data (JSON)
-          </button>
+          <div className="stack gap-sm">
+            <button className="btn btn-primary btn-block" onClick={exportData}>
+              Download Data (JSON)
+            </button>
+            <label className="btn btn-secondary btn-block" style={{ cursor: "pointer", textAlign: "center", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 48, borderRadius: 12, border: "1px solid var(--color-surface-3)" }}>
+              Import Data (JSON)
+              <input type="file" accept=".json" onChange={importData} style={{ display: "none" }} />
+            </label>
+          </div>
+        </section>
+      )}
+
+      {section === "request" && (
+        <section className="card" style={{ padding: 20 }}>
+          <SectionTitle>Submit a Request</SectionTitle>
+          <p className="secondary" style={{ lineHeight: 1.7, marginBottom: 20 }}>
+            Got an idea to make TAPAS better? We'd love to hear it! Fill out the form below.
+          </p>
+          <form
+            className="stack gap-md"
+            onSubmit={(e) => {
+              e.preventDefault();
+              setShowSuccessModal(true);
+            }}
+          >
+            <Field label="Feature Title">
+              <input className="input" placeholder="e.g. Dark Mode" required />
+            </Field>
+            <Field label="Description">
+              <textarea
+                className="input"
+                placeholder="How should it work?"
+                rows={4}
+                required
+                style={{ resize: "vertical", padding: "12px", minHeight: 100 }}
+              />
+            </Field>
+            <Field label="Attach Image or Video (Optional)">
+              <label
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "24px 12px",
+                  background: "var(--color-surface-2)",
+                  border: "1px dashed rgba(255,255,255,0.15)",
+                  borderRadius: 12,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  textAlign: "center"
+                }}
+              >
+                <IconPlus width={24} height={24} style={{ color: "var(--color-text-muted)", marginBottom: 8 }} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-main)" }}>
+                  {requestFile ? requestFile.name : "Tap to upload media"}
+                </span>
+                {!requestFile && (
+                  <span className="text-caption" style={{ marginTop: 4 }}>PNG, JPG, or MP4 (max 10MB)</span>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,video/*"
+                  onChange={(e) => setRequestFile(e.target.files?.[0] || null)}
+                  style={{ display: "none" }}
+                />
+              </label>
+            </Field>
+            <button className="btn btn-primary btn-block" type="submit" style={{ marginTop: 8 }}>
+              Submit Request
+            </button>
+          </form>
         </section>
       )}
 
@@ -774,7 +878,71 @@ export default function ProfileSectionPage() {
           </Link>
         </section>
       )}
+
+      {toast && (
+        <div style={{ position: "fixed", bottom: 100, left: "50%", transform: "translateX(-50%)", background: toast.type === "error" ? "var(--color-warning-soft)" : "var(--color-mint-active)", color: toast.type === "error" ? "#fff" : "var(--color-bg)", padding: "12px 24px", borderRadius: 30, fontWeight: 700, zIndex: 1000, boxShadow: "0 8px 24px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
+          {toast.message}
+        </div>
+      )}
+
+      <AnimatePresence>
+        {showSuccessModal && (
+          <CenterModal onClose={() => { setShowSuccessModal(false); router.replace("/profile"); }} title="Request Submitted">
+            <div style={{ textAlign: "center", padding: "8px 0 4px" }}>
+              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 150, damping: 12 }}
+                style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(115,253,156,0.14)", display: "grid", placeItems: "center", margin: "0 auto 16px", boxShadow: "var(--glow-mint)" }}>
+                <IconCheck width={36} height={36} style={{ color: "#73fd9c" }} />
+              </motion.div>
+              <h3 style={{ fontSize: 20, marginBottom: 8 }}>Thank You!</h3>
+              <p className="secondary" style={{ marginBottom: 24 }}>Your feature request has been submitted successfully.</p>
+              <button className="btn btn-primary btn-block btn-lg" onClick={() => { setShowSuccessModal(false); router.replace("/profile"); }}>
+                Back to Profile
+              </button>
+            </div>
+          </CenterModal>
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function CenterModal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        style={{ position: "fixed", inset: 0, background: "rgba(4,8,6,0.68)", zIndex: 400 }}
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.96, y: 12 }}
+        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+        className="glass"
+        style={{
+          position: "fixed",
+          left: "50%",
+          top: "50%",
+          translate: "-50% -50%",
+          width: "min(420px, calc(100% - 32px))",
+          zIndex: 401,
+          borderRadius: 18,
+          padding: 18,
+          boxSizing: "border-box",
+        }}
+      >
+        <div className="row between" style={{ gap: 12, alignItems: "flex-start", marginBottom: 14 }}>
+          <h3 className="section-title" style={{ fontSize: 18, margin: 0 }}>{title}</h3>
+          <button className="icon-btn" onClick={onClose} aria-label="Close" style={{ width: 34, height: 34 }}>
+            <IconClose width={15} height={15} />
+          </button>
+        </div>
+        {children}
+      </motion.div>
+    </>
   );
 }
 

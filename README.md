@@ -1,6 +1,6 @@
 # Tapas — Health & Practice Tracker
 
-Built in the **AEROLINK** workspace, per `Tapas PRD.md` and `Tapas Design System.md`.
+Built per `Tapas PRD.md` and `Tapas Design System.md`.
 
 One calm place to track **movement, yoga, and breathwork** — a PWA-first health
 practice tracker that treats daily practices as an interconnected system.

@@ -9,7 +9,7 @@ import { InstallAppCard } from "@/components/InstallAppCard";
 import { useStore } from "@/lib/store";
 import { useMounted } from "@/lib/useMounted";
 import { IconArrowRight } from "@/components/Icons";
-import { Footprints, FileChartLine, BookOpenText, ReceiptText } from "lucide-react";
+import { Footprints, FileChartLine, BookOpenText, ReceiptText, Timer } from "lucide-react";
 import { ROUTINE_PRESETS } from "@/lib/seed/routinePresets";
 
 const TRAIN_COLOR = "var(--color-train)";
@@ -40,7 +40,11 @@ const localDayKey = (date: Date | string) => {
 
 export default function HomePage() {
   const mounted = useMounted();
-  const s = useStore();
+  const workouts = useStore((s) => s.workouts);
+  const yoga = useStore((s) => s.yoga);
+  const breath = useStore((s) => s.breath);
+  const body = useStore((s) => s.body);
+  const profile = useStore((s) => s.profile);
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -75,11 +79,11 @@ export default function HomePage() {
       if (activityScrollRef.current) activityScrollRef.current.scrollLeft = activityScrollRef.current.scrollWidth;
     }, 10);
     return () => clearTimeout(timer);
-  }, [mounted, rangeDays, s.workouts.length, s.yoga.length, s.breath.length]);
+  }, [mounted, rangeDays, workouts.length, yoga.length, breath.length]);
 
   if (!mounted) return <div className="page" />;
 
-  const firstName = (s.profile.name || "there").trim().split(/\s+/)[0] || "there";
+  const firstName = (profile.name || "there").trim().split(/\s+/)[0] || "there";
 
   const today = new Date();
   const days = Array.from({ length: rangeDays }).map((_, i) => {
@@ -92,22 +96,22 @@ export default function HomePage() {
   const rangeLabel = `Last ${rangeDays} days`;
 
   // Get days where user did train or yoga
-  const activeTrainDates = new Set(s.workouts.map(w => localDayKey(w.date)));
-  const activeYogaDates = new Set(s.yoga.map(y => localDayKey(y.date)));
-  const activeBreathDates = new Set(s.breath.filter((b) => b.completed).map(b => localDayKey(b.date)));
+  const activeTrainDates = new Set(workouts.map(w => localDayKey(w.date)));
+  const activeYogaDates = new Set(yoga.map(y => localDayKey(y.date)));
+  const activeBreathDates = new Set(breath.filter((b) => b.completed).map(b => localDayKey(b.date)));
 
   const trainCountByDay: Record<string, number> = {};
   const yogaCountByDay: Record<string, number> = {};
   const breathCountByDay: Record<string, number> = {};
-  s.workouts.forEach(w => {
+  workouts.forEach(w => {
     const d = localDayKey(w.date);
     trainCountByDay[d] = (trainCountByDay[d] || 0) + 1;
   });
-  s.yoga.forEach(y => {
+  yoga.forEach(y => {
     const d = localDayKey(y.date);
     yogaCountByDay[d] = (yogaCountByDay[d] || 0) + 1;
   });
-  s.breath.filter((b) => b.completed).forEach(b => {
+  breath.filter((b) => b.completed).forEach(b => {
     const d = localDayKey(b.date);
     breathCountByDay[d] = (breathCountByDay[d] || 0) + 1;
   });
@@ -122,7 +126,7 @@ export default function HomePage() {
     { key: "yoga", label: "Yoga", short: "Y", color: YOGA_COLOR, counts: yogaCountByDay },
     { key: "breath", label: "Breathe", short: "B", color: BREATH_COLOR, counts: breathCountByDay },
   ] as const;
-  const weightEntries = [...s.body]
+  const weightEntries = [...body]
     .filter((entry) => typeof entry.weight === "number" && entry.weight > 0)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const rangeWeightEntries = weightEntries.filter((entry) => rangeKeySet.has(localDayKey(entry.date)));
@@ -134,9 +138,6 @@ export default function HomePage() {
   return (
     <div className="page">
       <AppHeader title="Home" subtitle={`${greeting()}, ${firstName}`} />
-      <div style={{ marginBottom: 20 }}>
-        <InstallAppCard compact placement={`home:${s.profile.email || "guest"}`} />
-      </div>
       <RangeFilter value={rangeDays} onChange={handleSetRangeDays} />
 
       {/* Calendar View */}
@@ -351,6 +352,7 @@ export default function HomePage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <QuickAction href="/report" title="Detailed Report" desc="Monthly activity and progress" Icon={FileChartLine} color="var(--color-mint-active)" />
         <QuickAction href="/library" title="Library" desc="Explore exercises and poses" Icon={BookOpenText} color="var(--color-mint-active)" />
+        <QuickAction href="/fasting" title="Fasting" desc="Intermittent fasting timer" Icon={Timer} color="var(--color-tertiary)" />
         <QuickAction href="/logs" title="Exercise Logs" desc="View your completed routines" Icon={ReceiptText} color="var(--color-mint-active)" />
         <QuickAction href="/body" title="Weight Logs" desc="Track weight and progress" Icon={Footprints} color="var(--color-mint-active)" />
       </div>

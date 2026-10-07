@@ -293,13 +293,37 @@ export default function RoutineLibraryPage() {
           background: "linear-gradient(180deg, rgba(14,21,15,0), var(--color-background) 24%)",
         }}
       >
-        <div style={{ maxWidth: 520, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr auto", gap: 10, alignItems: "center" }}>
-          <div className="clay" style={{ padding: "10px 12px" }}>
-            <div style={{ fontWeight: 800 }}>{selectedItems.length} selected</div>
-            <div className="text-caption">Add multiple items to this routine day</div>
+        <div
+          className="glass"
+          style={{
+            maxWidth: 520,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "8px 8px 8px 18px",
+            borderRadius: 100,
+            boxShadow: "0 12px 32px rgba(0,0,0,0.5)",
+            border: "1px solid rgba(255,255,255,0.06)"
+          }}
+        >
+          <div style={{ minWidth: 0, paddingRight: 12 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--color-text-main)" }}>
+              {selectedItems.length} selected
+            </div>
+            {selectedItems.length === 0 && (
+              <div className="text-caption" style={{ fontSize: 13, marginTop: 2 }}>
+                Select items to add
+              </div>
+            )}
           </div>
-          <button className="btn btn-primary" onClick={finishSelection} disabled={selectedItems.length === 0} style={{ minHeight: 48, paddingInline: 18 }}>
-            <IconPlus width={17} height={17} /> Add
+          <button
+            className="btn btn-primary"
+            onClick={finishSelection}
+            disabled={selectedItems.length === 0}
+            style={{ minHeight: 44, borderRadius: 100, paddingInline: 22, fontWeight: 700, opacity: selectedItems.length === 0 ? 0.5 : 1 }}
+          >
+            Add items
           </button>
         </div>
       </div>
@@ -342,9 +366,6 @@ function FilterSheet({ title, value, options, getLabel, onPick, onClose }: { tit
             <h2 style={{ fontSize: 18, fontWeight: 700 }}>{title}</h2>
             <p className="text-caption" style={{ marginTop: 2 }}>Choose one filter</p>
           </div>
-          <button className="btn btn-secondary" onClick={onClose} style={{ minHeight: 34, padding: "6px 12px", fontSize: 13 }}>
-            Done
-          </button>
         </div>
         <div className="stack gap-xs" style={{ maxHeight: "56vh", overflowY: "auto" }}>
           {options.map((part) => (

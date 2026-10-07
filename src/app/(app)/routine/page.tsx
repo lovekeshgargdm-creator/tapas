@@ -823,7 +823,7 @@ function TrainRoutineCard({
         <div className="row gap-xs wrap" style={{ marginBottom: 18 }}>
           {trainCount > 0 && <span className="pill row" style={{ color: "var(--color-train)", borderColor: "color-mix(in srgb, var(--color-train) 25%, transparent)", background: "color-mix(in srgb, var(--color-train) 8%, transparent)" }}><IconDumbbell width={12} height={12} style={{ marginRight: 4 }} /> {trainCount} {trainCount === 1 ? 'Exercise' : 'Exercises'}</span>}
           {poseCount > 0 && <span className="pill row" style={{ color: "var(--color-yoga)", borderColor: "color-mix(in srgb, var(--color-yoga) 25%, transparent)", background: "color-mix(in srgb, var(--color-yoga) 8%, transparent)" }}><IconYoga width={12} height={12} style={{ marginRight: 4 }} /> {poseCount} {poseCount === 1 ? 'Pose' : 'Poses'}</span>}
-          {breathCount > 0 && <span className="pill row" style={{ color: "var(--color-breathe)", borderColor: "color-mix(in srgb, var(--color-breathe) 25%, transparent)", background: "color-mix(in srgb, var(--color-breathe) 8%, transparent)" }}><IconBreathe width={12} height={12} style={{ marginRight: 4 }} /> {breathCount} {breathCount === 1 ? 'Session' : 'Sessions'}</span>}
+          {breathCount > 0 && <span className="pill row" style={{ color: "var(--color-breathe)", borderColor: "color-mix(in srgb, var(--color-breathe) 25%, transparent)", background: "color-mix(in srgb, var(--color-breathe) 8%, transparent)" }}><IconBreathe width={12} height={12} style={{ marginRight: 4 }} /> {breathCount} {breathCount === 1 ? 'Breath' : 'Breaths'}</span>}
         </div>
 
         <div className="row between" style={{ gap: 12 }}>
